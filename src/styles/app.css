@@ -62,3 +62,19 @@
 .workOrderToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:10px}.searchInput{display:flex;align-items:center;gap:8px;min-width:260px;background:#f8fafc;border-radius:14px;padding:9px 12px}.searchInput input{border:0;background:transparent;outline:0;width:100%}.segmented.compact{overflow:auto}.segmented.compact button{white-space:nowrap}
 @media(max-width:1100px){.metricGrid{grid-template-columns:repeat(3,1fr)}.facilitySnapshotGrid{grid-template-columns:repeat(2,1fr)}.facilityCardGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.commandHero{align-items:flex-start;flex-direction:column;padding:24px}.commandHero h1{font-size:30px}.heroPulse{width:100%}.metricGrid{grid-template-columns:repeat(2,1fr)}.dashboardGrid{grid-template-columns:1fr}.facilitySnapshotGrid,.facilityCardGrid,.facilityTabs{grid-template-columns:1fr}.calendarToolbar,.workOrderToolbar{align-items:stretch;flex-direction:column}.calendarBoard{grid-template-columns:repeat(7,minmax(140px,1fr))}.searchInput{min-width:0}.detailList{grid-template-columns:1fr}.facilityHero{align-items:flex-start;flex-wrap:wrap}}
+
+/* Aurora v3.5 Finance Engine */
+.financeMetrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+.financeCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.financeCard{background:#fff;border:1px solid var(--line);border-radius:26px;padding:20px;box-shadow:0 12px 28px rgba(15,23,42,.06)}
+.financeCard h2{margin:10px 0 4px}.financeCard p{color:var(--muted)}.money{display:block;font-size:30px;margin:18px 0}
+.financeRow{display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)}.financeRow:last-child{border-bottom:0}
+.financeRow strong,.financeRow span{display:block}.financeRow span{font-size:12px;color:var(--muted);margin-top:3px}.financeRow>b{font-size:17px;white-space:nowrap}
+.financeDocIcon{width:42px;height:42px;border-radius:14px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;flex:0 0 auto}
+.financeDocIcon.expense{background:#fee2e2;color:#b91c1c}.financeDocIcon.payroll{background:#ede9fe;color:#6d28d9}
+.positiveMoney{color:#15803d}.negativeMoney{color:#b91c1c}.financeTable{overflow:hidden}
+.financeAttention{min-height:100%}.payPreview{display:flex;align-items:center;justify-content:space-between;background:#0f172a;color:#fff;border-radius:18px;padding:18px}.payPreview span{color:#94a3b8}.payPreview strong{font-size:25px}
+.status.sent{background:#dbeafe;color:#1d4ed8}.status.accepted,.status.paid,.status.received{background:#dcfce7;color:#15803d}.status.rejected{background:#fee2e2;color:#b91c1c}.status.draft{background:#f1f5f9;color:#475569}
+@media(max-width:1050px){.financeMetrics{grid-template-columns:repeat(3,1fr)}.financeCards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.financeMetrics,.financeCards{grid-template-columns:1fr 1fr}.financeRow{align-items:flex-start;flex-wrap:wrap}.financeRow .grow{min-width:calc(100% - 60px)}}
+@media(max-width:480px){.financeMetrics,.financeCards{grid-template-columns:1fr}}

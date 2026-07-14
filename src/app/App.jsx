@@ -3,19 +3,21 @@ import {
   AlertTriangle, ArrowLeft, Bell, Building2, CalendarDays, Camera, CheckCircle2,
   ChevronRight, CircleUserRound, ClipboardCheck, Clock, FileText, Home, Image, PackageOpen,
   LogOut, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, UsersRound, Wrench, X,
-  ArrowRight, BarChart3, MapPin, TrendingUp, Boxes, ListFilter, CalendarRange
+  ArrowRight, BarChart3, MapPin, TrendingUp, Boxes, ListFilter, CalendarRange,
+  DollarSign, Receipt, CreditCard, WalletCards, Banknote, Download
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
   saveMyProfile, seedMIP, toggleTask, updateVisit, uploadProof, createSupplyItem, upsertFacilityInventory, adjustFacilityInventory, deleteRecord, updateRecord, archiveRecord,
-  createCustomerContact, updateCustomerContact, archiveCustomerContact, checkInfrastructure
+  createCustomerContact, updateCustomerContact, archiveCustomerContact, checkInfrastructure,
+  createQuote, createInvoice, createPayment, createExpense, createPayrollEntry
 } from '../services/api';
 
 const empty = {
   customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
-  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[]
+  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[], quotes:[], invoices:[], payments:[], expenses:[], payroll:[]
 };
 
 function Modal({open,title,onClose,children}) {
@@ -717,6 +719,80 @@ function EmployeeWorkOrders({profile,data,reload}) {
   return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Employee Portal</p><h1>Today's missions</h1><p>Complete each assigned work order area by area.</p></div></div><div className="missionCards">{mine.map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button className="missionCard" key={order.id} onClick={()=>setSelected(order)}><div className="missionTime">{order.scheduled_date} · {order.scheduled_time||'Any time'}</div><h2>{order.title}</h2><p>{facility?.name}</p><div className={`status ${order.status}`}>{order.status}</div></button>})}{!mine.length&&<Empty title="No assigned work orders" text="Assigned missions will appear here."/>}</div></div>;
 }
 
+
+function FinanceSummary({data,setPage}) {
+  const invoiceTotal=data.invoices.reduce((s,x)=>s+Number(x.amount||0),0);
+  const paidTotal=data.payments.reduce((s,x)=>s+Number(x.amount||0),0);
+  const expenseTotal=data.expenses.reduce((s,x)=>s+Number(x.amount||0),0);
+  const payrollTotal=data.payroll.reduce((s,x)=>s+Number(x.gross_pay||0),0);
+  const outstanding=Math.max(0,invoiceTotal-paidTotal);
+  return <div className="page financeHome">
+    <div className="pageHeader"><div><p className="eyebrow">Finance engine</p><h1>Financial control center</h1><p>Quotes, billing, cash received, expenses, and payroll in one workspace.</p></div></div>
+    <div className="metricGrid financeMetrics">
+      <button className="metricCard" onClick={()=>setPage('invoices')}><div className="metricIcon blue"><Receipt size={21}/></div><span>Invoiced</span><strong>${invoiceTotal.toLocaleString()}</strong><small>{data.invoices.length} invoices</small></button>
+      <button className="metricCard" onClick={()=>setPage('payments')}><div className="metricIcon green"><CreditCard size={21}/></div><span>Payments received</span><strong>${paidTotal.toLocaleString()}</strong><small>{data.payments.length} payments</small></button>
+      <button className="metricCard" onClick={()=>setPage('invoices')}><div className="metricIcon amber"><WalletCards size={21}/></div><span>Outstanding</span><strong>${outstanding.toLocaleString()}</strong><small>Invoice balance</small></button>
+      <button className="metricCard" onClick={()=>setPage('expenses')}><div className="metricIcon red"><Banknote size={21}/></div><span>Expenses</span><strong>${expenseTotal.toLocaleString()}</strong><small>{data.expenses.length} entries</small></button>
+      <button className="metricCard" onClick={()=>setPage('payroll')}><div className="metricIcon violet"><CircleUserRound size={21}/></div><span>Payroll</span><strong>${payrollTotal.toLocaleString()}</strong><small>{data.payroll.length} entries</small></button>
+    </div>
+    <div className="dashboardGrid">
+      <section className="panel">
+        <div className="panelTitle"><div><p className="eyebrow">Recent billing</p><h2>Invoices</h2></div><button className="link" onClick={()=>setPage('invoices')}>Open invoices</button></div>
+        {data.invoices.slice(0,6).map(i=><div className="financeRow" key={i.id}><div className="financeDocIcon"><Receipt size={18}/></div><div className="grow"><strong>{i.invoice_number||'Invoice'}</strong><span>{data.customers.find(c=>c.id===i.customer_id)?.name||'Customer'} · due {i.due_date||'not set'}</span></div><b>${Number(i.amount||0).toLocaleString()}</b><div className={`status ${i.status}`}>{i.status}</div></div>)}
+        {!data.invoices.length&&<Empty title="No invoices" text="Create the first customer invoice."/>}
+      </section>
+      <section className="attentionPanel financeAttention">
+        <div className="panelTitle"><div><p className="eyebrow">Finance actions</p><h2>Quick access</h2></div></div>
+        <button onClick={()=>setPage('quotes')}><FileText size={18}/><div><strong>Create a quote</strong><span>Build a customer proposal</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('invoices')}><Receipt size={18}/><div><strong>Create an invoice</strong><span>Bill recurring or extra work</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('payments')}><CreditCard size={18}/><div><strong>Record payment</strong><span>Update customer balances</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('expenses')}><Banknote size={18}/><div><strong>Record expense</strong><span>Supplies, mileage, vendors</span></div><ChevronRight size={17}/></button>
+      </section>
+    </div>
+  </div>;
+}
+
+function QuotesPage({data,companyId,reload}) {
+  const blank={customer_id:'',facility_id:'',quote_number:`Q-${Date.now().toString().slice(-6)}`,title:'Recurring Cleaning Service',amount:0,status:'draft',valid_until:'',notes:''};
+  const [open,setOpen]=useState(false);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
+  async function save(){if(!form.title)return setMessage('Title is required.');const{error}=await createQuote(companyId,form);if(error)return setMessage(error.message);setOpen(false);setForm({...blank,quote_number:`Q-${Date.now().toString().slice(-6)}`});await reload()}
+  async function status(id,status){const{error}=await updateRecord('quotes',id,{status});if(error)return setMessage(error.message);await reload()}
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Finance</p><h1>Quotes</h1><p>Create proposals and track acceptance.</p></div><Button onClick={()=>setOpen(true)}><Plus size={16}/> New quote</Button></div>{message&&<div className="notice">{message}</div>}<div className="financeCards">{data.quotes.map(q=><article className="financeCard" key={q.id}><div className="objectHead"><div className="financeDocIcon"><FileText size={20}/></div><div className={`status ${q.status}`}>{q.status}</div></div><p className="eyebrow">{q.quote_number||'Quote'}</p><h2>{q.title}</h2><p>{data.customers.find(c=>c.id===q.customer_id)?.name||'Customer'}</p><strong className="money">${Number(q.amount||0).toLocaleString()}</strong><div className="cardActions"><button onClick={()=>status(q.id,'sent')}>Mark sent</button><button onClick={()=>status(q.id,'accepted')}>Accept</button><button onClick={()=>status(q.id,'rejected')}>Reject</button></div></article>)}{!data.quotes.length&&<Empty title="No quotes" text="Create your first proposal."/>}</div><Modal open={open} title="New quote" onClose={()=>setOpen(false)}><div className="form"><label>Customer<select value={form.customer_id} onChange={e=>setForm({...form,customer_id:e.target.value,facility_id:''})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Facility<select value={form.facility_id} onChange={e=>setForm({...form,facility_id:e.target.value})}><option value="">Optional...</option>{facilities.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><div className="form2"><label>Quote number<input value={form.quote_number} onChange={e=>setForm({...form,quote_number:e.target.value})}/></label><label>Valid until<input type="date" value={form.valid_until} onChange={e=>setForm({...form,valid_until:e.target.value})}/></label></div><label>Title<input value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><label>Amount<input type="number" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label><label>Notes<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label><Button onClick={save}>Create quote</Button></div></Modal></div>;
+}
+
+function InvoicesPage({data,companyId,reload}) {
+  const blank={customer_id:'',facility_id:'',invoice_number:`INV-${Date.now().toString().slice(-6)}`,amount:0,due_date:'',status:'draft',notes:''};
+  const [open,setOpen]=useState(false);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
+  async function save(){const{error}=await createInvoice(companyId,form);if(error)return setMessage(error.message);setOpen(false);setForm({...blank,invoice_number:`INV-${Date.now().toString().slice(-6)}`});await reload()}
+  async function status(id,status){const{error}=await updateRecord('invoices',id,{status});if(error)return setMessage(error.message);await reload()}
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Finance</p><h1>Invoices</h1><p>Bill customers and monitor outstanding balances.</p></div><Button onClick={()=>setOpen(true)}><Plus size={16}/> New invoice</Button></div>{message&&<div className="notice">{message}</div>}<section className="panel financeTable">{data.invoices.map(i=><div className="financeRow" key={i.id}><div className="financeDocIcon"><Receipt size={18}/></div><div className="grow"><strong>{i.invoice_number||'Invoice'}</strong><span>{data.customers.find(c=>c.id===i.customer_id)?.name||'Customer'} · due {i.due_date||'not set'}</span></div><b>${Number(i.amount||0).toLocaleString()}</b><div className={`status ${i.status}`}>{i.status}</div><div className="rowActions"><button onClick={()=>status(i.id,'sent')}>Sent</button><button onClick={()=>status(i.id,'paid')}>Paid</button></div></div>)}{!data.invoices.length&&<Empty title="No invoices" text="Create your first invoice."/>}</section><Modal open={open} title="New invoice" onClose={()=>setOpen(false)}><div className="form"><label>Customer<select value={form.customer_id} onChange={e=>setForm({...form,customer_id:e.target.value,facility_id:''})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Facility<select value={form.facility_id} onChange={e=>setForm({...form,facility_id:e.target.value})}><option value="">Optional...</option>{facilities.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><div className="form2"><label>Invoice number<input value={form.invoice_number} onChange={e=>setForm({...form,invoice_number:e.target.value})}/></label><label>Due date<input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})}/></label></div><label>Amount<input type="number" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label><label>Notes<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label><Button onClick={save}>Create invoice</Button></div></Modal></div>;
+}
+
+function PaymentsPage({data,companyId,reload}) {
+  const blank={invoice_id:'',customer_id:'',amount:0,payment_date:new Date().toISOString().slice(0,10),method:'ACH'};
+  const [open,setOpen]=useState(false);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  function chooseInvoice(id){const invoice=data.invoices.find(i=>i.id===id);setForm({...form,invoice_id:id,customer_id:invoice?.customer_id||'',amount:invoice?.amount||0})}
+  async function save(){const{error}=await createPayment(companyId,form);if(error)return setMessage(error.message);if(form.invoice_id)await updateRecord('invoices',form.invoice_id,{status:'paid'});setOpen(false);setForm(blank);await reload()}
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Finance</p><h1>Payments</h1><p>Record money received and close invoice balances.</p></div><Button onClick={()=>setOpen(true)}><Plus size={16}/> Record payment</Button></div>{message&&<div className="notice">{message}</div>}<section className="panel financeTable">{data.payments.map(p=><div className="financeRow" key={p.id}><div className="financeDocIcon"><CreditCard size={18}/></div><div className="grow"><strong>{data.customers.find(c=>c.id===p.customer_id)?.name||'Customer payment'}</strong><span>{p.payment_date} · {p.method||'Method not set'}</span></div><b className="positiveMoney">+${Number(p.amount||0).toLocaleString()}</b><div className="status completed">{p.status}</div></div>)}{!data.payments.length&&<Empty title="No payments" text="Received payments will appear here."/>}</section><Modal open={open} title="Record payment" onClose={()=>setOpen(false)}><div className="form"><label>Invoice<select value={form.invoice_id} onChange={e=>chooseInvoice(e.target.value)}><option value="">Select invoice...</option>{data.invoices.filter(i=>i.status!=='paid').map(i=><option key={i.id} value={i.id}>{i.invoice_number} — ${i.amount}</option>)}</select></label><label>Customer<select value={form.customer_id} onChange={e=>setForm({...form,customer_id:e.target.value})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><div className="form2"><label>Amount<input type="number" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label><label>Date<input type="date" value={form.payment_date} onChange={e=>setForm({...form,payment_date:e.target.value})}/></label></div><label>Method<select value={form.method} onChange={e=>setForm({...form,method:e.target.value})}><option>ACH</option><option>Check</option><option>Cash</option><option>Credit Card</option><option>Zelle</option></select></label><Button onClick={save}>Record payment</Button></div></Modal></div>;
+}
+
+function ExpensesPage({data,companyId,reload}) {
+  const blank={category:'supplies',vendor:'',amount:0,expense_date:new Date().toISOString().slice(0,10),notes:''};
+  const [open,setOpen]=useState(false);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  async function save(){const{error}=await createExpense(companyId,form);if(error)return setMessage(error.message);setOpen(false);setForm(blank);await reload()}
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Finance</p><h1>Expenses</h1><p>Track supplies, mileage, vendors, and operating costs.</p></div><Button onClick={()=>setOpen(true)}><Plus size={16}/> New expense</Button></div>{message&&<div className="notice">{message}</div>}<section className="panel financeTable">{data.expenses.map(e=><div className="financeRow" key={e.id}><div className="financeDocIcon expense"><Banknote size={18}/></div><div className="grow"><strong>{e.vendor||e.category}</strong><span>{e.expense_date} · {e.category} · {e.notes||'No notes'}</span></div><b className="negativeMoney">-${Number(e.amount||0).toLocaleString()}</b></div>)}{!data.expenses.length&&<Empty title="No expenses" text="Record your first business expense."/>}</section><Modal open={open} title="New expense" onClose={()=>setOpen(false)}><div className="form"><div className="form2"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>supplies</option><option>mileage</option><option>equipment</option><option>contractor</option><option>insurance</option><option>other</option></select></label><label>Vendor<input value={form.vendor} onChange={e=>setForm({...form,vendor:e.target.value})}/></label></div><div className="form2"><label>Amount<input type="number" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label><label>Date<input type="date" value={form.expense_date} onChange={e=>setForm({...form,expense_date:e.target.value})}/></label></div><label>Notes<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label><Button onClick={save}>Record expense</Button></div></Modal></div>;
+}
+
+function PayrollPage({data,companyId,reload}) {
+  const blank={employee_profile_id:'',period_start:'',period_end:'',hours:0,hourly_rate:25,status:'draft'};
+  const [open,setOpen]=useState(false);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  const employees=data.people.filter(p=>['employee','manager'].includes(p.role));
+  async function save(){const{error}=await createPayrollEntry(companyId,form);if(error)return setMessage(error.message);setOpen(false);setForm(blank);await reload()}
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Finance</p><h1>Payroll</h1><p>Calculate employee hours and gross pay by period.</p></div><Button onClick={()=>setOpen(true)}><Plus size={16}/> Payroll entry</Button></div>{message&&<div className="notice">{message}</div>}<section className="panel financeTable">{data.payroll.map(p=><div className="financeRow" key={p.id}><div className="financeDocIcon payroll"><CircleUserRound size={18}/></div><div className="grow"><strong>{data.people.find(x=>x.id===p.employee_profile_id)?.full_name||'Employee'}</strong><span>{p.period_start||'—'} to {p.period_end||'—'} · {p.hours||0} hours at ${p.hourly_rate||0}/hr</span></div><b>${Number(p.gross_pay||0).toLocaleString()}</b><div className={`status ${p.status}`}>{p.status}</div></div>)}{!data.payroll.length&&<Empty title="No payroll entries" text="Create the first pay-period calculation."/>}</section><Modal open={open} title="New payroll entry" onClose={()=>setOpen(false)}><div className="form"><label>Employee<select value={form.employee_profile_id} onChange={e=>setForm({...form,employee_profile_id:e.target.value})}><option value="">Select...</option>{employees.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></label><div className="form2"><label>Period start<input type="date" value={form.period_start} onChange={e=>setForm({...form,period_start:e.target.value})}/></label><label>Period end<input type="date" value={form.period_end} onChange={e=>setForm({...form,period_end:e.target.value})}/></label></div><div className="form2"><label>Hours<input type="number" step="0.25" value={form.hours} onChange={e=>setForm({...form,hours:e.target.value})}/></label><label>Hourly rate<input type="number" step="0.01" value={form.hourly_rate} onChange={e=>setForm({...form,hourly_rate:e.target.value})}/></label></div><div className="payPreview"><span>Gross pay</span><strong>${(Number(form.hours||0)*Number(form.hourly_rate||0)).toFixed(2)}</strong></div><Button onClick={save}>Create payroll entry</Button></div></Modal></div>;
+}
+
 function ModulePlaceholder({title,description}){return <div className="page"><div className="pageHeader"><div><p className="eyebrow">FacilityOS module</p><h1>{title}</h1><p>{description}</p></div></div><section className="panel"><Empty title={`${title} workspace`} text="The navigation and data foundation are active. This module is ready for its detailed workflow in the next operational release."/></section></div>}
 
 function CalendarPage({data,companyId,reload}) {
@@ -1058,13 +1134,13 @@ export function App() {
     else if(page==='employees') content=<EmployeesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='issues') content=<IssuesPage data={data}/>;
     else if(page==='supplies') content=<SuppliesPage data={data} companyId={profile.company_id} reload={reload}/>;
-    else if(page==='quotes') content=<ModulePlaceholder title="Quotes" description="Create customer proposals and convert accepted quotes into work orders."/>;
+    else if(page==='quotes') content=<QuotesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='inspections') content=<ModulePlaceholder title="Inspections" description="Facility inspections, scoring, findings, and corrective actions."/>;
-    else if(page==='invoices') content=<ModulePlaceholder title="Invoices" description="Bill recurring and additional services and share invoices with customers."/>;
-    else if(page==='payments') content=<ModulePlaceholder title="Payments" description="Track received and outstanding customer payments."/>;
-    else if(page==='payroll') content=<ModulePlaceholder title="Payroll" description="Track employee hours, pay rates, and payroll periods."/>;
-    else if(page==='expenses') content=<ModulePlaceholder title="Expenses" description="Record supplies, mileage, subcontractors, and operating expenses."/>;
-    else if(page==='billing') content=<ModulePlaceholder title="Billing & Subscriptions" description="Manage customer recurring billing now and FacilityOS SaaS subscriptions later."/>;
+    else if(page==='invoices') content=<InvoicesPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='payments') content=<PaymentsPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='payroll') content=<PayrollPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='expenses') content=<ExpensesPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='billing') content=<FinanceSummary data={data} setPage={setPage}/>;
     else if(page==='contractors') content=<ModulePlaceholder title="Contractors" description="Manage outsourced cleaners, plumbers, electricians, and other service partners."/>;
     else if(page==='reports') content=<ModulePlaceholder title="Reports" description="Operations, proof-of-service, customer, financial, and employee performance reports."/>;
     else content=<SettingsPage companyId={profile.company_id} reload={reload}/>;

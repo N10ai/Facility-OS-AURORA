@@ -1,14 +1,16 @@
 # FacilityOS Aurora
-Current release: v3.4 Visible Operations
+Current release: v3.5 Finance Engine
 
-Locked decisions:
-- `facility_supply_inventory` remains canonical.
-- Additive schema changes only.
-- Admin, employee, and customer portals share one operational data model.
-- Codespaces uses port 3000.
-
-v3.4 focus:
-- Visible command-center dashboard.
-- Operational week calendar.
-- Facility digital-twin detail screen.
-- Searchable/filterable Work Orders.
+Operational modules:
+- CRM
+- Facilities
+- Calendar
+- Work Orders
+- Employee missions
+- Customer service proof
+- Facility supply inventory
+- Quotes
+- Invoices
+- Payments
+- Expenses
+- Payroll

@@ -46,14 +46,16 @@ export async function loadWorkspace(profile) {
   if (!profile?.company_id) return {
     customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
     tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[],
-    workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[]
+    workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[],
+    quotes:[], invoices:[], payments:[], expenses:[], payroll:[]
   };
 
   const companyId = profile.company_id;
 
   const [
     customers, contacts, facilities, people, plans, visits, tasks, proof, issues,
-    requests, supplies, inventory, invites, workOrders, workOrderAreas, supplyUsage, timeEntries
+    requests, supplies, inventory, invites, workOrders, workOrderAreas, supplyUsage, timeEntries,
+    quotes, invoices, payments, expenses, payroll
   ] = await Promise.all([
     supabase.from('customers').select('*').eq('company_id',companyId).neq('status','archived').order('name'),
     supabase.from('customer_contacts').select('*').eq('company_id',companyId).neq('status','archived').order('full_name'),
@@ -71,7 +73,12 @@ export async function loadWorkspace(profile) {
     supabase.from('work_orders').select('*').eq('company_id',companyId).neq('status','archived').order('scheduled_date',{ascending:true}),
     supabase.from('work_order_areas').select('*').eq('company_id',companyId).order('sort_order'),
     supabase.from('work_order_supply_usage').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
-    supabase.from('work_order_time_entries').select('*').eq('company_id',companyId).order('started_at',{ascending:false})
+    supabase.from('work_order_time_entries').select('*').eq('company_id',companyId).order('started_at',{ascending:false}),
+    supabase.from('quotes').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
+    supabase.from('invoices').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
+    supabase.from('payments').select('*').eq('company_id',companyId).order('payment_date',{ascending:false}),
+    supabase.from('expenses').select('*').eq('company_id',companyId).order('expense_date',{ascending:false}),
+    supabase.from('payroll_entries').select('*').eq('company_id',companyId).order('period_end',{ascending:false})
   ]);
 
   return {
@@ -80,7 +87,9 @@ export async function loadWorkspace(profile) {
     tasks:tasks.data||[], proof:proof.data||[], issues:issues.data||[],
     requests:requests.data||[], supplies:supplies.data||[], inventory:inventory.data||[],
     invites:invites.data||[], workOrders:workOrders.data||[], workOrderAreas:workOrderAreas.data||[],
-    supplyUsage:supplyUsage.data||[], timeEntries:timeEntries.data||[]
+    supplyUsage:supplyUsage.data||[], timeEntries:timeEntries.data||[],
+    quotes:quotes.data||[], invoices:invoices.data||[], payments:payments.data||[],
+    expenses:expenses.data||[], payroll:payroll.data||[]
   };
 }
 
@@ -612,4 +621,71 @@ export async function recordSupplyUsage(companyId, workOrderId, facilityId, supp
   }
 
   return usage;
+}
+
+
+export async function createQuote(companyId, form) {
+  return supabase.from('quotes').insert({
+    company_id: companyId,
+    customer_id: form.customer_id || null,
+    facility_id: form.facility_id || null,
+    quote_number: form.quote_number,
+    title: form.title,
+    amount: Number(form.amount || 0),
+    status: form.status || 'draft',
+    valid_until: form.valid_until || null,
+    notes: form.notes || null
+  }).select().single();
+}
+
+export async function createInvoice(companyId, form) {
+  return supabase.from('invoices').insert({
+    company_id: companyId,
+    customer_id: form.customer_id || null,
+    facility_id: form.facility_id || null,
+    invoice_number: form.invoice_number,
+    amount: Number(form.amount || 0),
+    due_date: form.due_date || null,
+    status: form.status || 'draft',
+    notes: form.notes || null
+  }).select().single();
+}
+
+export async function createPayment(companyId, form) {
+  return supabase.from('payments').insert({
+    company_id: companyId,
+    invoice_id: form.invoice_id || null,
+    customer_id: form.customer_id || null,
+    amount: Number(form.amount || 0),
+    payment_date: form.payment_date || new Date().toISOString().slice(0,10),
+    method: form.method || null,
+    status: 'received'
+  }).select().single();
+}
+
+export async function createExpense(companyId, form) {
+  return supabase.from('expenses').insert({
+    company_id: companyId,
+    category: form.category || 'supplies',
+    vendor: form.vendor || null,
+    amount: Number(form.amount || 0),
+    expense_date: form.expense_date || new Date().toISOString().slice(0,10),
+    notes: form.notes || null,
+    status: 'recorded'
+  }).select().single();
+}
+
+export async function createPayrollEntry(companyId, form) {
+  const hours = Number(form.hours || 0);
+  const hourlyRate = Number(form.hourly_rate || 0);
+  return supabase.from('payroll_entries').insert({
+    company_id: companyId,
+    employee_profile_id: form.employee_profile_id || null,
+    period_start: form.period_start || null,
+    period_end: form.period_end || null,
+    hours,
+    hourly_rate: hourlyRate,
+    gross_pay: hours * hourlyRate,
+    status: form.status || 'draft'
+  }).select().single();
 }

@@ -1,8 +1,10 @@
-# Upgrade to Aurora v3.4.1
+# Upgrade to Aurora v3.5
 
-No Supabase migration is required.
+Run this migration in Supabase SQL Editor:
 
-After replacing the project files:
+`database/migrations/014_finance_engine.sql`
+
+Then:
 
 ```bash
 npm install --no-audit --no-fund --progress=false
@@ -10,9 +12,4 @@ npm run build
 bash scripts/restart-facilityos.sh
 ```
 
-Expected version:
-
-```bash
-node -p "require('./package.json').version"
-# 3.4.1
-```
+Expected version: `3.5.0`
