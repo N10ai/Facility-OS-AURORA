@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FacilityOS: Start",
+      "type": "shell",
+      "command": "bash scripts/codespaces-start.sh",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": false
+      }
+    },
+    {
+      "label": "FacilityOS: Restart",
+      "type": "shell",
+      "command": "bash scripts/restart-facilityos.sh",
+      "problemMatcher": []
+    }
+  ]
+}
