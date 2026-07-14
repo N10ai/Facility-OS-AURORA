@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Bell, Building2, CalendarDays, Camera, CheckCircle2,
   ChevronRight, CircleUserRound, ClipboardCheck, Clock, FileText, Home, Image, PackageOpen,
-  LogOut, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, UsersRound, Wrench, X
+  LogOut, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, UsersRound, Wrench, X,
+  ArrowRight, BarChart3, MapPin, TrendingUp, Boxes, ListFilter, CalendarRange
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
-  createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
+  createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
   saveMyProfile, seedMIP, toggleTask, updateVisit, uploadProof, createSupplyItem, upsertFacilityInventory, adjustFacilityInventory, deleteRecord, updateRecord, archiveRecord,
   createCustomerContact, updateCustomerContact, archiveCustomerContact, checkInfrastructure
 } from '../services/api';
@@ -143,7 +144,7 @@ const adminGroups = [
   { label:'Settings', icon:Settings, items:[['settings','Settings',Settings]] }
 ];
 const employeeNav = [['employee-home','Today',Home],['employee-schedule','Schedule',CalendarDays],['employee-history','History',CheckCircle2]];
-const customerNav = [['customer-home','Overview',Home],['customer-schedule','Schedule',CalendarDays],['customer-proof','Service Proof',Image],['customer-requests','Requests',Wrench]];
+const customerNav = [['customer-home','Overview',Home],['customer-schedule','Schedule',CalendarDays],['customer-proof','Service Reports',FileText],['customer-requests','Requests',Wrench]];
 
 function Shell({profile,portal,setPortal,page,setPage,children}) {
   const [mobileSheet,setMobileSheet]=useState(null);
@@ -180,46 +181,99 @@ function Shell({profile,portal,setPortal,page,setPage,children}) {
 
 function AdminOverview({data,setPage}) {
   const today=new Date().toISOString().slice(0,10);
-  const todayVisits=data.visits.filter(v=>v.scheduled_date===today);
+  const todayOrders=data.workOrders.filter(w=>w.scheduled_date===today&&w.status!=='archived');
+  const pending=data.workOrders.filter(w=>w.status==='awaiting_verification');
+  const active=data.workOrders.filter(w=>['in_progress','returned'].includes(w.status));
   const openIssues=data.issues.filter(i=>i.status!=='closed');
-  const activeEmployees=data.people.filter(p=>p.role==='employee');
-  const activeCustomers=data.customers.length;
+  const lowStock=data.inventory.filter(x=>Number(x.quantity_on_hand)<=Number(x.reorder_level));
+  const monthlyRevenue=data.customers.reduce((sum,c)=>sum+Number(c.monthly_value||0),0);
+  const customer=id=>data.customers.find(c=>c.id===id);
+  const facility=id=>data.facilities.find(f=>f.id===id);
+  const employee=id=>data.people.find(p=>p.id===id);
 
-  return <div className="page">
-    <div className="pageHeader"><div><p className="eyebrow">Operations control</p><h1>Good morning, Ignacio.</h1><p>Here’s what needs attention across your cleaning operation.</p></div><Button onClick={()=>setPage('calendar')}><Plus size={16}/> Plan service</Button></div>
-    <div className="stats">
-      <Stat icon={CalendarDays} label="Visits today" value={todayVisits.length} note={`${data.visits.length} scheduled total`}/>
-      <Stat icon={UsersRound} label="Customers" value={activeCustomers} note="Active accounts" tone="pastelBlue"/>
-      <Stat icon={CircleUserRound} label="Employees" value={activeEmployees.length} note="Available team" tone="pastelGreen"/>
-      <Stat icon={AlertTriangle} label="Open issues" value={openIssues.length} note="Needs review" tone="pastelYellow"/>
+  return <div className="page opsHome">
+    <section className="commandHero">
+      <div>
+        <p className="eyebrow">Aurora command center</p>
+        <h1>Good morning, Ignacio.</h1>
+        <p>Everything that needs attention across today’s cleaning operation.</p>
+        <div className="heroActions">
+          <Button onClick={()=>setPage('work-orders')}><Plus size={16}/> Create work order</Button>
+          <Button variant="light" onClick={()=>setPage('calendar')}><CalendarRange size={16}/> Open calendar</Button>
+        </div>
+      </div>
+      <div className="heroPulse">
+        <span>Live operations</span>
+        <strong>{active.length}</strong>
+        <small>missions moving now</small>
+      </div>
+    </section>
+
+    <div className="metricGrid">
+      <button className="metricCard" onClick={()=>setPage('work-orders')}>
+        <div className="metricIcon blue"><ClipboardCheck size={21}/></div>
+        <span>Jobs today</span><strong>{todayOrders.length}</strong><small>{todayOrders.filter(w=>w.status==='scheduled').length} still scheduled</small>
+      </button>
+      <button className="metricCard" onClick={()=>setPage('work-orders')}>
+        <div className="metricIcon amber"><ShieldCheck size={21}/></div>
+        <span>Waiting approval</span><strong>{pending.length}</strong><small>Manager verification queue</small>
+      </button>
+      <button className="metricCard" onClick={()=>setPage('supplies')}>
+        <div className="metricIcon red"><PackageOpen size={21}/></div>
+        <span>Low inventory</span><strong>{lowStock.length}</strong><small>Facility items below reorder</small>
+      </button>
+      <button className="metricCard" onClick={()=>setPage('issues')}>
+        <div className="metricIcon violet"><AlertTriangle size={21}/></div>
+        <span>Open issues</span><strong>{openIssues.length}</strong><small>Customer and employee reports</small>
+      </button>
+      <article className="metricCard">
+        <div className="metricIcon green"><TrendingUp size={21}/></div>
+        <span>Monthly recurring value</span><strong>${monthlyRevenue.toLocaleString()}</strong><small>Across active customers</small>
+      </article>
     </div>
-    <div className="grid2">
-      <section className="panel large">
-        <div className="panelTitle"><div><p className="eyebrow">Today</p><h2>Mission schedule</h2></div><button className="link" onClick={()=>setPage('calendar')}>View calendar</button></div>
-        <div className="rows">
-          {todayVisits.map(v=><VisitRow key={v.id} visit={v} data={data}/>)}
-          {!todayVisits.length && <Empty title="No visits today" text="Create a service plan and generate visits."/>}
+
+    <div className="dashboardGrid">
+      <section className="panel liveBoard">
+        <div className="panelTitle">
+          <div><p className="eyebrow">Today</p><h2>Live mission board</h2></div>
+          <button className="link" onClick={()=>setPage('work-orders')}>All work orders <ArrowRight size={15}/></button>
+        </div>
+        <div className="liveRows">
+          {todayOrders.map(order=><button className="liveMission" key={order.id} onClick={()=>setPage('work-orders')}>
+            <div className="timePill">{order.scheduled_time||'Any'}</div>
+            <div className="liveMissionMain">
+              <strong>{facility(order.facility_id)?.name||order.title}</strong>
+              <span>{customer(order.customer_id)?.name||'Customer'} · {employee(order.assigned_to_profile_id)?.full_name||'Unassigned'}</span>
+            </div>
+            <div className={`status ${order.status}`}>{order.status}</div>
+          </button>)}
+          {!todayOrders.length&&<Empty title="No work orders today" text="Create a work order or generate visits from a recurring plan."/>}
         </div>
       </section>
-      <section className="darkCard">
-        <Sparkles size={24}/>
-        <h2>Operations focus</h2>
-        <p>Use recurring plans to schedule the year, assign employees, and require photo proof before a mission can be verified.</p>
-        <Button variant="light" onClick={()=>setPage('calendar')}>Open planning</Button>
+
+      <section className="attentionPanel">
+        <div className="panelTitle"><div><p className="eyebrow">Attention</p><h2>Priority queue</h2></div></div>
+        <button onClick={()=>setPage('work-orders')}><ShieldCheck size={18}/><div><strong>{pending.length} approvals</strong><span>Completed missions waiting for you</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('supplies')}><PackageOpen size={18}/><div><strong>{lowStock.length} low-stock items</strong><span>Restock before the next service</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('issues')}><AlertTriangle size={18}/><div><strong>{openIssues.length} open issues</strong><span>Review facility findings</span></div><ChevronRight size={17}/></button>
+        <button onClick={()=>setPage('customer-requests')}><Wrench size={18}/><div><strong>{data.requests.filter(r=>r.status==='new').length} new requests</strong><span>Customer service needs</span></div><ChevronRight size={17}/></button>
       </section>
     </div>
-    <div className="grid2">
-      <section className="panel">
-        <div className="panelTitle"><h2>Recent issues</h2></div>
-        {openIssues.slice(0,5).map(i=><div className="simpleRow" key={i.id}><div className={`priority ${i.priority}`}/><div><strong>{i.title}</strong><span>{i.priority} · {i.status}</span></div></div>)}
-        {!openIssues.length && <p>No open issues.</p>}
-      </section>
-      <section className="panel">
-        <div className="panelTitle"><h2>Customer requests</h2></div>
-        {data.requests.slice(0,5).map(r=><div className="simpleRow" key={r.id}><Wrench size={18}/><div><strong>{r.title}</strong><span>{r.status}</span></div></div>)}
-        {!data.requests.length && <p>No customer requests.</p>}
-      </section>
-    </div>
+
+    <section className="panel facilitySnapshot">
+      <div className="panelTitle"><div><p className="eyebrow">Facilities</p><h2>Operational snapshot</h2></div><button className="link" onClick={()=>setPage('facilities')}>View facilities</button></div>
+      <div className="facilitySnapshotGrid">
+        {data.facilities.slice(0,4).map(f=>{
+          const orders=data.workOrders.filter(w=>w.facility_id===f.id&&w.status!=='archived');
+          const inventory=data.inventory.filter(i=>i.facility_id===f.id);
+          return <button key={f.id} className="facilitySnapshotCard" onClick={()=>setPage('facilities')}>
+            <div className="facilityAvatar"><Building2 size={20}/></div>
+            <div><strong>{f.name}</strong><span>{customer(f.customer_id)?.name}</span></div>
+            <div className="facilityQuick"><b>{orders.length}</b><span>jobs</span><b>{inventory.length}</b><span>supplies</span></div>
+          </button>
+        })}
+      </div>
+    </section>
   </div>;
 }
 
@@ -357,13 +411,71 @@ function ContactsPage({data,companyId,reload}) {
 
 function FacilitiesPage({data,companyId,reload}) {
   const blank={customer_id:'',name:'',facility_type:'office',address:'',access_notes:'',restroom_count:0,floor_type:'',estimated_minutes:90};
-  const [open,setOpen]=useState(false);const [editing,setEditing]=useState(null);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  const [open,setOpen]=useState(false);const [editing,setEditing]=useState(null);const [selected,setSelected]=useState(null);const [form,setForm]=useState(blank);const [message,setMessage]=useState('');
+  const customer=id=>data.customers.find(c=>c.id===id);
   function newFacility(){setEditing(null);setForm(blank);setMessage('');setOpen(true)}
   function editFacility(f){setEditing(f);setForm({...blank,...f});setMessage('');setOpen(true)}
   async function save(){const payload={...form,restroom_count:Number(form.restroom_count||0),estimated_minutes:Number(form.estimated_minutes||0)};const result=editing?await updateRecord('facilities',editing.id,payload):await createFacility(companyId,payload);if(result.error)return setMessage(result.error.message);setOpen(false);setEditing(null);await reload()}
-  async function archive(f){if(!confirm(`Archive ${f.name}?`))return;const{error}=await archiveRecord('facilities',f.id);if(error)return setMessage(error.message);await reload()}
-  async function remove(f){if(!confirm(`Permanently delete ${f.name}?`))return;const{error}=await deleteRecord('facilities',f.id);if(error)return setMessage(error.message);await reload()}
-  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Digital twins</p><h1>Facilities</h1><p>Each site stores access, cleaning conditions, schedule, proof, and issues.</p></div><Button onClick={newFacility}><Plus size={16}/> New facility</Button></div>{message&&<div className="notice">{message}</div>}<div className="cards">{data.facilities.map(f=>{const customer=data.customers.find(c=>c.id===f.customer_id);return <article className="objectCard" key={f.id}><div className="objectHead"><div className="objectIcon"><Building2 size={21}/></div><div className="status active">{f.status}</div></div><h2>{f.name}</h2><p>{customer?.name} · {f.facility_type}</p><div className="miniStats"><span><b>{f.restroom_count||0}</b> restrooms</span><span><b>{f.estimated_minutes||0}</b> min</span></div><div className="softBox"><strong>Floor</strong><span>{f.floor_type||'Not set'}</span></div><div className="cardActions"><button onClick={()=>editFacility(f)}>Edit</button><button onClick={()=>archive(f)}>Archive</button><button className="dangerLink" onClick={()=>remove(f)}>Delete</button></div></article>})}</div><Modal open={open} title={editing?'Edit facility':'New facility'} onClose={()=>setOpen(false)}><div className="form"><label>Customer<select value={form.customer_id||''} onChange={e=>setForm({...form,customer_id:e.target.value})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Name<input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})}/></label><div className="form2"><label>Type<select value={form.facility_type||'office'} onChange={e=>setForm({...form,facility_type:e.target.value})}><option>office</option><option>warehouse</option><option>medical</option><option>retail</option></select></label><label>Restrooms<input type="number" value={form.restroom_count||0} onChange={e=>setForm({...form,restroom_count:e.target.value})}/></label></div><div className="form2"><label>Floor type<input value={form.floor_type||''} onChange={e=>setForm({...form,floor_type:e.target.value})}/></label><label>Estimated minutes<input type="number" value={form.estimated_minutes||0} onChange={e=>setForm({...form,estimated_minutes:e.target.value})}/></label></div><label>Address<input value={form.address||''} onChange={e=>setForm({...form,address:e.target.value})}/></label><label>Access and cleaning notes<textarea value={form.access_notes||''} onChange={e=>setForm({...form,access_notes:e.target.value})}/></label>{message&&<div className="notice">{message}</div>}<Button onClick={save}>{editing?'Save changes':'Create facility'}</Button></div></Modal></div>;
+  async function archive(f){if(!confirm(`Archive ${f.name}?`))return;const{error}=await archiveRecord('facilities',f.id);if(error)return setMessage(error.message);setSelected(null);await reload()}
+
+  if(selected){
+    const current=data.facilities.find(f=>f.id===selected.id)||selected;
+    const orders=data.workOrders.filter(w=>w.facility_id===current.id&&w.status!=='archived');
+    const issues=data.issues.filter(i=>i.facility_id===current.id);
+    const inventory=data.inventory.filter(i=>i.facility_id===current.id);
+    const plans=data.plans.filter(p=>p.facility_id===current.id);
+    return <div className="page">
+      <button className="back" onClick={()=>setSelected(null)}><ArrowLeft size={18}/> Facilities</button>
+      <section className="facilityHero">
+        <div className="facilityHeroIcon"><Building2 size={28}/></div>
+        <div className="grow"><p className="eyebrow">Facility workspace</p><h1>{current.name}</h1><p>{customer(current.customer_id)?.name} · {current.address||'No address'}</p></div>
+        <Button variant="secondary" onClick={()=>editFacility(current)}>Edit facility</Button>
+      </section>
+      <div className="stats">
+        <Stat icon={Clock} label="Estimated service" value={`${current.estimated_minutes||0} min`} note="Per visit"/>
+        <Stat icon={ClipboardCheck} label="Work orders" value={orders.length} note={`${orders.filter(w=>w.status==='verified').length} verified`}/>
+        <Stat icon={PackageOpen} label="Supply items" value={inventory.length} note={`${inventory.filter(i=>Number(i.quantity_on_hand)<=Number(i.reorder_level)).length} low`}/>
+        <Stat icon={AlertTriangle} label="Issues" value={issues.filter(i=>i.status!=='closed').length} note="Open findings"/>
+      </div>
+      <div className="facilityTabs">
+        <section className="panel">
+          <div className="panelTitle"><h2>Facility instructions</h2><MapPin size={18}/></div>
+          <div className="detailList"><div><span>Facility type</span><strong>{current.facility_type}</strong></div><div><span>Floor type</span><strong>{current.floor_type||'Not set'}</strong></div><div><span>Restrooms</span><strong>{current.restroom_count||0}</strong></div></div>
+          <div className="softBox"><strong>Access & cleaning notes</strong><span>{current.access_notes||'No notes yet.'}</span></div>
+        </section>
+        <section className="panel">
+          <div className="panelTitle"><h2>Service plans</h2><CalendarDays size={18}/></div>
+          {plans.map(p=><div className="simpleRow" key={p.id}><CalendarRange size={18}/><div><strong>{p.name}</strong><span>{p.frequency} · {p.default_time}</span></div></div>)}
+          {!plans.length&&<Empty title="No service plans" text="Create one from the calendar."/>}
+        </section>
+        <section className="panel">
+          <div className="panelTitle"><h2>Supply closet</h2><Boxes size={18}/></div>
+          {inventory.map(row=>{const supply=data.supplies.find(s=>s.id===row.supply_item_id);return <div className="inventoryMini" key={row.id}><div><strong>{supply?.name||'Supply'}</strong><span>{row.storage_location||'No location'}</span></div><div className={Number(row.quantity_on_hand)<=Number(row.reorder_level)?'stockBadge low':'stockBadge'}>{row.quantity_on_hand} {supply?.unit||''}</div></div>})}
+          {!inventory.length&&<Empty title="No facility inventory" text="Add stock from the Supplies module."/>}
+        </section>
+        <section className="panel">
+          <div className="panelTitle"><h2>Recent activity</h2><BarChart3 size={18}/></div>
+          {orders.slice(0,6).map(w=><div className="simpleRow" key={w.id}><ClipboardCheck size={18}/><div><strong>{w.title}</strong><span>{w.scheduled_date} · {w.status}</span></div></div>)}
+          {issues.slice(0,4).map(i=><div className="simpleRow" key={i.id}><AlertTriangle size={18}/><div><strong>{i.title}</strong><span>{i.status}</span></div></div>)}
+        </section>
+      </div>
+    </div>
+  }
+
+  return <div className="page">
+    <div className="pageHeader"><div><p className="eyebrow">Facility digital twin</p><h1>Facilities</h1><p>Open a facility to see instructions, service plans, inventory, issues, and activity.</p></div><Button onClick={newFacility}><Plus size={16}/> New facility</Button></div>
+    {message&&<div className="notice">{message}</div>}
+    <div className="facilityCardGrid">
+      {data.facilities.map(f=>{const orders=data.workOrders.filter(w=>w.facility_id===f.id&&w.status!=='archived');const inventory=data.inventory.filter(i=>i.facility_id===f.id);const low=inventory.filter(i=>Number(i.quantity_on_hand)<=Number(i.reorder_level)).length;return <button className="facilityCardV2" key={f.id} onClick={()=>setSelected(f)}>
+        <div className="objectHead"><div className="facilityAvatar"><Building2 size={22}/></div><div className="status active">{f.status}</div></div>
+        <h2>{f.name}</h2><p>{customer(f.customer_id)?.name} · {f.facility_type}</p>
+        <div className="facilityCardStats"><span><b>{orders.length}</b> jobs</span><span><b>{inventory.length}</b> supplies</span><span className={low?'warn':''}><b>{low}</b> low</span></div>
+        <div className="facilityCardFooter"><span>{f.address||'No address'}</span><ChevronRight size={17}/></div>
+      </button>})}
+      {!data.facilities.length&&<Empty title="No facilities" text="Create your first facility."/>}
+    </div>
+    <Modal open={open} title={editing?'Edit facility':'New facility'} onClose={()=>setOpen(false)}><div className="form"><label>Customer<select value={form.customer_id||''} onChange={e=>setForm({...form,customer_id:e.target.value})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Name<input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})}/></label><div className="form2"><label>Type<select value={form.facility_type||'office'} onChange={e=>setForm({...form,facility_type:e.target.value})}><option>office</option><option>warehouse</option><option>medical</option><option>retail</option></select></label><label>Restrooms<input type="number" value={form.restroom_count||0} onChange={e=>setForm({...form,restroom_count:e.target.value})}/></label></div><div className="form2"><label>Floor type<input value={form.floor_type||''} onChange={e=>setForm({...form,floor_type:e.target.value})}/></label><label>Estimated minutes<input type="number" value={form.estimated_minutes||0} onChange={e=>setForm({...form,estimated_minutes:e.target.value})}/></label></div><label>Address<input value={form.address||''} onChange={e=>setForm({...form,address:e.target.value})}/></label><label>Access and cleaning notes<textarea value={form.access_notes||''} onChange={e=>setForm({...form,access_notes:e.target.value})}/></label>{message&&<div className="notice">{message}</div>}<Button onClick={save}>{editing?'Save changes':'Create facility'}</Button></div></Modal>
+  </div>;
 }
 
 function EmployeesPage({data,companyId,reload}) {
@@ -480,6 +592,7 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
   const [selected,setSelected]=useState(null);
   const [form,setForm]=useState(blank);
   const [message,setMessage]=useState('');
+  const [verification,setVerification]=useState({summary:'Service completed according to the facility plan.',quality_score:100,return_note:''});
   const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
   const employees=data.people.filter(p=>['employee','manager','owner'].includes(p.role));
   const customer=id=>data.customers.find(c=>c.id===id);
@@ -500,30 +613,63 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
     setSelected(null);await reload();
   }
 
+  async function approve(order){
+    const {error}=await verifyWorkOrder(order.id,profile.id,verification.summary,verification.quality_score);
+    if(error)return setMessage(error.message);
+    setMessage('Work order verified. The customer report is now visible.');
+    await reload();
+    setSelected({...order,status:'verified',customer_summary:verification.summary,quality_score:Number(verification.quality_score)});
+  }
+
+  async function sendBack(order){
+    if(!verification.return_note.trim())return setMessage('Add a correction note before returning the work order.');
+    const {error}=await returnWorkOrder(order.id,verification.return_note);
+    if(error)return setMessage(error.message);
+    setMessage('Work order returned to the employee with your note.');
+    await reload();
+    setSelected({...order,status:'returned',manager_note:verification.return_note});
+  }
+
   if(selected){
-    const areas=data.workOrderAreas.filter(a=>a.work_order_id===selected.id);
+    const current=data.workOrders.find(order=>order.id===selected.id)||selected;
+    const areas=data.workOrderAreas.filter(a=>a.work_order_id===current.id);
+    const usage=data.supplyUsage.filter(item=>item.work_order_id===current.id);
+    const entries=data.timeEntries.filter(item=>item.work_order_id===current.id);
     const completed=areas.filter(a=>a.status==='completed').length;
     const progress=areas.length?Math.round(completed/areas.length*100):0;
+    const started=entries.map(e=>e.started_at).filter(Boolean).sort()[0];
+    const ended=entries.map(e=>e.ended_at).filter(Boolean).sort().at(-1);
+    const actualMinutes=started&&ended?Math.max(1,Math.round((new Date(ended)-new Date(started))/60000)):null;
     return <div className="page">
       <button className="back" onClick={()=>setSelected(null)}><ArrowLeft size={18}/> Work Orders</button>
-      <div className="missionHero"><div><p className="eyebrow">Work Order</p><h1>{selected.title}</h1><p>{customer(selected.customer_id)?.name} · {facility(selected.facility_id)?.name}</p></div><div className={`status ${selected.status}`}>{selected.status}</div></div>
+      <div className="missionHero"><div><p className="eyebrow">Work Order</p><h1>{current.title}</h1><p>{customer(current.customer_id)?.name} · {facility(current.facility_id)?.name}</p></div><div className={`status ${current.status}`}>{current.status}</div></div>
       <div className="stats">
-        <Stat icon={CalendarDays} label="Scheduled" value={selected.scheduled_date} note={selected.scheduled_time||'No time'}/>
-        <Stat icon={CircleUserRound} label="Assigned" value={employee(selected.assigned_to_profile_id)?.full_name||'Unassigned'} note="Employee"/>
-        <Stat icon={Clock} label="Estimate" value={`${selected.estimated_minutes||0} min`} note="Planned duration"/>
+        <Stat icon={CalendarDays} label="Scheduled" value={current.scheduled_date} note={current.scheduled_time||'No time'}/>
+        <Stat icon={CircleUserRound} label="Assigned" value={employee(current.assigned_to_profile_id)?.full_name||'Unassigned'} note="Employee"/>
+        <Stat icon={Clock} label="Actual time" value={actualMinutes?`${actualMinutes} min`:'—'} note={`${current.estimated_minutes||0} min estimated`}/>
         <Stat icon={CheckCircle2} label="Progress" value={`${progress}%`} note={`${completed}/${areas.length} areas`}/>
       </div>
       <div className="grid2">
-        <section className="panel"><div className="panelTitle"><h2>Areas</h2><span>{completed}/{areas.length}</span></div>{areas.map(area=><div className="areaAdminRow" key={area.id}><div><strong>{area.name}</strong><span>{area.status}</span></div><div className={`status ${area.status}`}>{area.status}</div></div>)}{!areas.length&&<Empty title="No areas" text="Add areas when creating the work order."/>}</section>
-        <section className="panel"><h2>Instructions</h2><p>{selected.instructions||facility(selected.facility_id)?.access_notes||'No special instructions.'}</p><Button variant="ghost" onClick={()=>archive(selected)}>Archive</Button></section>
+        <section className="panel"><div className="panelTitle"><h2>Areas</h2><span>{completed}/{areas.length}</span></div>{areas.map(area=><div className="areaAdminRow" key={area.id}><div><strong>{area.name}</strong><span>{area.completed_at?new Date(area.completed_at).toLocaleString():area.status}</span></div><div className={`status ${area.status}`}>{area.status}</div></div>)}{!areas.length&&<Empty title="No areas" text="Add areas when creating the work order."/>}</section>
+        <section className="panel"><h2>Mission evidence</h2><p>{current.instructions||facility(current.facility_id)?.access_notes||'No special instructions.'}</p><div className="reportFacts"><span><b>{usage.length}</b> supply entries</span><span><b>{entries.length}</b> time entries</span><span><b>{current.quality_score||'—'}</b> quality score</span></div>{current.manager_note&&<div className="returnNote"><strong>Manager note</strong><p>{current.manager_note}</p></div>}</section>
       </div>
+      {current.status==='awaiting_verification'&&<section className="panel verificationPanel"><div className="panelTitle"><div><p className="eyebrow">Manager verification</p><h2>Approve customer report</h2></div><ShieldCheck size={24}/></div><label>Customer-facing summary<textarea value={verification.summary} onChange={e=>setVerification({...verification,summary:e.target.value})}/></label><div className="form2"><label>Quality score<input type="number" min="0" max="100" value={verification.quality_score} onChange={e=>setVerification({...verification,quality_score:e.target.value})}/></label><label>Correction note<textarea value={verification.return_note} onChange={e=>setVerification({...verification,return_note:e.target.value})}/></label></div><div className="buttonRow"><Button variant="secondary" onClick={()=>sendBack(current)}>Return for correction</Button><Button onClick={()=>approve(current)}><ShieldCheck size={17}/> Verify and release report</Button></div></section>}
+      {current.status==='verified'&&<section className="serviceReport"><div className="reportHeader"><div><p className="eyebrow">Verified service report</p><h2>{facility(current.facility_id)?.name}</h2><p>{current.customer_summary||'Service completed and verified.'}</p></div><div className="qualityRing">{current.quality_score||100}<small>/100</small></div></div><div className="reportFacts"><span><b>{current.scheduled_date}</b> service date</span><span><b>{actualMinutes||current.estimated_minutes||0} min</b> time</span><span><b>{completed}</b> areas completed</span><span><b>{usage.length}</b> supply entries</span></div></section>}
+      <Button variant="ghost" onClick={()=>archive(current)}>Archive</Button>
+      {message&&<div className="notice">{message}</div>}
     </div>;
   }
 
+  const visibleOrders=data.workOrders.filter(order=>{
+    const matchStatus=statusFilter==='all'||order.status===statusFilter;
+    const label=`${order.title} ${customer(order.customer_id)?.name||''} ${facility(order.facility_id)?.name||''}`.toLowerCase();
+    return matchStatus&&label.includes(query.toLowerCase());
+  });
   return <div className="page">
     <div className="pageHeader"><div><p className="eyebrow">Operations Engine</p><h1>Work Orders</h1><p>Schedule, assign, execute, and verify each cleaning mission.</p></div><Button onClick={()=>{setForm(blank);setMessage('');setOpen(true)}}><Plus size={16}/> New work order</Button></div>
     {message&&<div className="notice">{message}</div>}
-    <div className="workOrderGrid">{data.workOrders.map(order=><button className="workOrderCard" key={order.id} onClick={()=>setSelected(order)}><div className="objectHead"><div className="objectIcon"><ClipboardCheck size={21}/></div><div className={`status ${order.status}`}>{order.status}</div></div><p className="eyebrow">{order.scheduled_date} · {order.scheduled_time||'Any time'}</p><h2>{order.title}</h2><p>{customer(order.customer_id)?.name} · {facility(order.facility_id)?.name}</p><div className="miniStats"><span><b>{employee(order.assigned_to_profile_id)?.full_name||'Unassigned'}</b></span><span><b>{order.estimated_minutes||0}</b> min</span></div></button>)}{!data.workOrders.length&&<Empty title="No work orders" text="Create the first mission for a facility."/>}</div>
+    <section className="workOrderToolbar"><div className="searchInput"><Search size={17}/><input placeholder="Search work orders..." value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="segmented compact">{['all','scheduled','in_progress','awaiting_verification','verified'].map(s=><button key={s} className={statusFilter===s?'active':''} onClick={()=>setStatusFilter(s)}>{s.replaceAll('_',' ')}</button>)}</div></section>
+    <div className="workOrderGrid">{visibleOrders.map(order=><button className="workOrderCard" key={order.id} onClick={()=>setSelected(order)}><div className="objectHead"><div className="objectIcon"><ClipboardCheck size={21}/></div><div className={`status ${order.status}`}>{order.status}</div></div><p className="eyebrow">{order.scheduled_date} · {order.scheduled_time||'Any time'}</p><h2>{order.title}</h2><p>{customer(order.customer_id)?.name} · {facility(order.facility_id)?.name}</p><div className="miniStats"><span><b>{employee(order.assigned_to_profile_id)?.full_name||'Unassigned'}</b></span><span><b>{order.estimated_minutes||0}</b> min</span></div></button>)}{!visibleOrders.length&&<Empty title="No matching work orders" text="Change the search or status filter."/>}</div>
     <Modal open={open} title="New work order" onClose={()=>setOpen(false)}><div className="form">
       <label>Customer<select value={form.customer_id} onChange={e=>setForm({...form,customer_id:e.target.value,facility_id:''})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label>Facility<select value={form.facility_id} onChange={e=>setForm({...form,facility_id:e.target.value})}><option value="">Select...</option>{facilities.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
@@ -559,7 +705,7 @@ function EmployeeWorkOrders({profile,data,reload}) {
       <button className="back" onClick={()=>setSelected(null)}><ArrowLeft size={18}/> Today</button>
       <div className="missionHero"><div><p className="eyebrow">Today's Mission</p><h1>{current.title}</h1><p>{facility?.name} · {current.scheduled_time}</p></div><div className={`status ${current.status}`}>{current.status}</div></div>
       <section className="infoStrip"><Clock size={18}/><div><strong>{current.estimated_minutes||90} minutes</strong><span>{current.instructions||facility?.access_notes||'Follow the checklist.'}</span></div></section>
-      {current.status==='scheduled'&&<Button onClick={()=>start(current)}>Start mission</Button>}
+      {['scheduled','returned'].includes(current.status)&&<Button onClick={()=>start(current)}>{current.status==='returned'?'Resume corrections':'Start mission'}</Button>}{current.manager_note&&<div className="returnNote"><strong>Manager correction</strong><p>{current.manager_note}</p></div>}
       <section className="panel"><div className="panelTitle"><h2>Area workflow</h2><span>{areas.filter(a=>a.status==='completed').length}/{areas.length}</span></div>{areas.map(area=><label className="task" key={area.id}><input type="checkbox" checked={area.status==='completed'} onChange={()=>toggleArea(area)}/><div><strong>{area.name}</strong><span>{area.status==='completed'?'Completed':'Tap when complete'}</span></div></label>)}</section>
       <section className="panel"><h2>Supplies used</h2><div className="form2"><label>Supply<select value={supplyId} onChange={e=>setSupplyId(e.target.value)}><option value="">Select...</option>{inventory.map(item=>{const supply=data.supplies.find(s=>s.id===item.supply_item_id);return <option key={item.id} value={item.supply_item_id}>{supply?.name||'Supply'} — {item.quantity||0}</option>})}</select></label><label>Quantity<input type="number" min="1" value={quantity} onChange={e=>setQuantity(e.target.value)}/></label></div><Button variant="secondary" onClick={useSupply}>Record usage</Button></section>
       <Button onClick={finish}><CheckCircle2 size={17}/> Submit mission</Button>{message&&<div className="notice">{message}</div>}
@@ -573,42 +719,83 @@ function ModulePlaceholder({title,description}){return <div className="page"><di
 
 function CalendarPage({data,companyId,reload}) {
   const [planOpen,setPlanOpen]=useState(false);
-  const [selectedPlan,setSelectedPlan]=useState(null);
-  const [mission,setMission]=useState(null);
   const [form,setForm]=useState({customer_id:'',facility_id:'',name:'Weekly Cleaning',frequency:'weekly',weekdays:[6],start_date:new Date().toISOString().slice(0,10),default_time:'09:00',assigned_to_profile_id:'',estimated_minutes:90,visit_price:0});
   const [message,setMessage]=useState('');
-
+  const [view,setView]=useState('week');
+  const [anchor,setAnchor]=useState(new Date());
   const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
   const employees=data.people.filter(p=>p.role==='employee'||p.role==='manager');
+  const customer=id=>data.customers.find(c=>c.id===id);
+  const facility=id=>data.facilities.find(f=>f.id===id);
+  const employee=id=>data.people.find(p=>p.id===id);
 
-  async function savePlan() {
+  const startOfWeek=new Date(anchor);
+  startOfWeek.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
+  startOfWeek.setHours(0,0,0,0);
+  const days=Array.from({length:view==='week'?7:14},(_,i)=>{const d=new Date(startOfWeek);d.setDate(d.getDate()+i);return d});
+  const dateKey=d=>d.toISOString().slice(0,10);
+
+  async function savePlan(){
     const {data:plan,error}=await createServicePlan(companyId,form);
-    if(error) return setMessage(error.message);
-    setPlanOpen(false); setSelectedPlan(plan); reload();
-  }
-
-  async function generate(plan) {
-    setMessage('');
-    const {error}=await generateVisits(companyId,plan,12);
-    if(error) return setMessage(error.message);
-    setMessage('Generated the next 12 months of visits.');
+    if(error)return setMessage(error.message);
+    setPlanOpen(false);
+    const generated=await generateVisits(companyId,plan,3);
+    setMessage(generated.error?`Plan created, but visits were not generated: ${generated.error.message}`:'Plan created and next 3 months generated.');
     reload();
   }
 
-  return <div className="page">
-    <div className="pageHeader"><div><p className="eyebrow">Planning</p><h1>Calendar & recurring services</h1><p>Create a service plan once and generate the year.</p></div><Button onClick={()=>setPlanOpen(true)}><Plus size={16}/> New service plan</Button></div>
+  function shift(amount){const next=new Date(anchor);next.setDate(next.getDate()+amount);setAnchor(next)}
+  const ordersByDate=days.reduce((acc,d)=>{acc[dateKey(d)]=data.workOrders.filter(w=>w.scheduled_date===dateKey(d)&&w.status!=='archived');return acc},{});
+
+  return <div className="page calendarV2">
+    <div className="pageHeader">
+      <div><p className="eyebrow">Scheduling engine</p><h1>Operations calendar</h1><p>Plan recurring service and see work orders by day.</p></div>
+      <Button onClick={()=>setPlanOpen(true)}><Plus size={16}/> Recurring service</Button>
+    </div>
     {message&&<div className="notice">{message}</div>}
+
+    <section className="calendarToolbar">
+      <div className="segmented">
+        <button className={view==='week'?'active':''} onClick={()=>setView('week')}>Week</button>
+        <button className={view==='fortnight'?'active':''} onClick={()=>setView('fortnight')}>2 weeks</button>
+      </div>
+      <div className="calendarNav">
+        <button onClick={()=>shift(view==='week'?-7:-14)}>‹</button>
+        <strong>{startOfWeek.toLocaleDateString(undefined,{month:'long',day:'numeric'})}</strong>
+        <button onClick={()=>shift(view==='week'?7:14)}>›</button>
+        <button onClick={()=>setAnchor(new Date())}>Today</button>
+      </div>
+    </section>
+
+    <section className={`calendarBoard ${view}`}>
+      {days.map(d=>{
+        const key=dateKey(d);const orders=ordersByDate[key]||[];
+        return <article className={key===new Date().toISOString().slice(0,10)?'calendarDay today':'calendarDay'} key={key}>
+          <header><span>{d.toLocaleDateString(undefined,{weekday:'short'})}</span><strong>{d.getDate()}</strong></header>
+          <div className="calendarJobs">
+            {orders.map(order=><button className={`calendarJob ${order.status}`} key={order.id}>
+              <span>{order.scheduled_time?.slice(0,5)||'Any'}</span>
+              <strong>{facility(order.facility_id)?.name||order.title}</strong>
+              <small>{employee(order.assigned_to_profile_id)?.full_name||'Unassigned'}</small>
+            </button>)}
+            {!orders.length&&<div className="calendarEmpty">No jobs</div>}
+          </div>
+        </article>
+      })}
+    </section>
+
     <div className="grid2">
       <section className="panel">
-        <div className="panelTitle"><h2>Service plans</h2></div>
-        {data.plans.map(p=><div className="planRow" key={p.id}><div><strong>{p.name}</strong><span>{p.frequency} · {p.default_time} · ${p.visit_price||0}/visit</span></div><Button variant="secondary" onClick={()=>generate(p)}>Generate 12 months</Button></div>)}
-        {!data.plans.length&&<Empty title="No service plans" text="Create your first recurring plan."/>}
+        <div className="panelTitle"><h2>Recurring service plans</h2><span>{data.plans.length}</span></div>
+        {data.plans.map(p=><div className="planRow" key={p.id}><div><strong>{p.name}</strong><span>{facility(p.facility_id)?.name} · {p.frequency} · {p.default_time}</span></div><div className="status active">active</div></div>)}
+        {!data.plans.length&&<Empty title="No recurring plans" text="Create the first recurring cleaning schedule."/>}
       </section>
       <section className="panel">
-        <div className="panelTitle"><h2>Upcoming visits</h2></div>
-        <div className="rows">{data.visits.slice(0,12).map(v=><VisitRow key={v.id} visit={v} data={data} onOpen={setMission}/>)}</div>
+        <div className="panelTitle"><h2>Unassigned work</h2><span>{data.workOrders.filter(w=>!w.assigned_to_profile_id&&w.status!=='archived').length}</span></div>
+        {data.workOrders.filter(w=>!w.assigned_to_profile_id&&w.status!=='archived').slice(0,8).map(w=><div className="simpleRow" key={w.id}><CalendarDays size={18}/><div><strong>{facility(w.facility_id)?.name||w.title}</strong><span>{w.scheduled_date} · {customer(w.customer_id)?.name}</span></div></div>)}
       </section>
     </div>
+
     <Modal open={planOpen} title="New recurring service plan" onClose={()=>setPlanOpen(false)}><div className="form">
       <label>Customer<select value={form.customer_id} onChange={e=>setForm({...form,customer_id:e.target.value,facility_id:''})}><option value="">Select...</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label>Facility<select value={form.facility_id} onChange={e=>setForm({...form,facility_id:e.target.value})}><option value="">Select...</option>{facilities.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
@@ -617,9 +804,8 @@ function CalendarPage({data,companyId,reload}) {
       <div className="form2"><label>Default time<input type="time" value={form.default_time} onChange={e=>setForm({...form,default_time:e.target.value})}/></label><label>Employee<select value={form.assigned_to_profile_id} onChange={e=>setForm({...form,assigned_to_profile_id:e.target.value})}><option value="">Unassigned</option>{employees.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></label></div>
       <div className="form2"><label>Estimated minutes<input type="number" value={form.estimated_minutes} onChange={e=>setForm({...form,estimated_minutes:e.target.value})}/></label><label>Price per visit<input type="number" value={form.visit_price} onChange={e=>setForm({...form,visit_price:e.target.value})}/></label></div>
       <label>Weekdays<select multiple value={form.weekdays.map(String)} onChange={e=>setForm({...form,weekdays:Array.from(e.target.selectedOptions).map(o=>Number(o.value))})}><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label>
-      <Button onClick={savePlan}>Create plan</Button>
+      <Button onClick={savePlan}>Create and generate</Button>
     </div></Modal>
-    <Modal open={!!mission} title="Mission details" onClose={()=>setMission(null)}>{mission&&<AdminMission visit={mission} data={data} reload={reload}/>}</Modal>
   </div>;
 }
 
@@ -790,14 +976,16 @@ function CustomerHome({profile,data}) {
 }
 
 function CustomerProof({profile,data}) {
-  const visits=data.visits.filter(v=>v.customer_id===profile.customer_id&&v.verification_status==='verified');
-  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Verified work</p><h1>Service proof</h1><p>Before and after photos for completed visits.</p></div></div>{visits.map(v=>{const proof=data.proof.filter(p=>p.service_visit_id===v.id);return <section className="panel" key={v.id}><div className="panelTitle"><div><h2>{v.title}</h2><p>{v.scheduled_date}</p></div><div className="status completed">verified</div></div><div className="proofGrid">{proof.map(p=><figure key={p.id}><img src={p.file_url}/><figcaption>{p.proof_type}</figcaption></figure>)}</div></section>})}{!visits.length&&<Empty title="No verified services yet" text="Completed and verified missions will appear here."/>}</div>;
+  const orders=data.workOrders.filter(order=>order.customer_id===profile.customer_id&&order.status==='verified').sort((a,b)=>(b.verified_at||b.completed_at||'').localeCompare(a.verified_at||a.completed_at||''));
+  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Verified work</p><h1>Service reports</h1><p>Manager-approved cleaning results for your facilities.</p></div></div>{orders.map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);const employee=data.people.find(p=>p.id===order.assigned_to_profile_id);const areas=data.workOrderAreas.filter(a=>a.work_order_id===order.id);const usage=data.supplyUsage.filter(u=>u.work_order_id===order.id);return <section className="serviceReport customerReport" key={order.id}><div className="reportHeader"><div><p className="eyebrow">{order.scheduled_date}</p><h2>{facility?.name||order.title}</h2><p>{order.customer_summary||'Service completed and verified by management.'}</p></div><div className="qualityRing">{order.quality_score||100}<small>/100</small></div></div><div className="reportFacts"><span><b>{employee?.full_name||'Service team'}</b> completed by</span><span><b>{areas.filter(a=>a.status==='completed').length}/{areas.length}</b> areas</span><span><b>{order.estimated_minutes||0} min</b> planned</span><span><b>{usage.length}</b> supply entries</span></div><div className="reportAreaGrid">{areas.map(area=><div key={area.id}><CheckCircle2 size={17}/><span>{area.name}</span></div>)}</div></section>})}{!orders.length&&<Empty title="No verified reports yet" text="Reports appear after a manager approves a completed work order."/>}</div>;
 }
 
 function CustomerRequests({profile,data,reload}) {
   const [open,setOpen]=useState(false);
   const [form,setForm]=useState({facility_id:'',request_type:'additional_service',title:'',description:''});
   const [message,setMessage]=useState('');
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [query,setQuery]=useState('');
   const facilities=data.facilities.filter(f=>f.customer_id===profile.customer_id);
   async function save() {
     const {error}=await createCustomerRequest(profile.company_id,profile,form);
@@ -870,7 +1058,6 @@ export function App() {
     else if(page==='employees') content=<EmployeesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='issues') content=<IssuesPage data={data}/>;
     else if(page==='supplies') content=<SuppliesPage data={data} companyId={profile.company_id} reload={reload}/>;
-    else if(page==='work-orders') content=<CalendarPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='quotes') content=<ModulePlaceholder title="Quotes" description="Create customer proposals and convert accepted quotes into work orders."/>;
     else if(page==='inspections') content=<ModulePlaceholder title="Inspections" description="Facility inspections, scoring, findings, and corrective actions."/>;
     else if(page==='invoices') content=<ModulePlaceholder title="Invoices" description="Bill recurring and additional services and share invoices with customers."/>;

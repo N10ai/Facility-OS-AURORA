@@ -518,6 +518,29 @@ export async function updateWorkOrder(id, updates) {
   return supabase.from('work_orders').update(updates).eq('id', id).select().single();
 }
 
+export async function verifyWorkOrder(id, profileId, summary, qualityScore=100) {
+  const now = new Date().toISOString();
+  return supabase.from('work_orders').update({
+    status:'verified',
+    verified_at:now,
+    verified_by_profile_id:profileId,
+    customer_summary:summary||'Service completed and verified by management.',
+    quality_score:Number(qualityScore||100),
+    manager_note:null,
+    updated_at:now
+  }).eq('id',id).select().single();
+}
+
+export async function returnWorkOrder(id, note) {
+  const now = new Date().toISOString();
+  return supabase.from('work_orders').update({
+    status:'returned',
+    returned_at:now,
+    manager_note:note||'Manager requested corrections.',
+    updated_at:now
+  }).eq('id',id).select().single();
+}
+
 export async function archiveWorkOrder(id) {
   return supabase.from('work_orders').update({ status: 'archived' }).eq('id', id);
 }
