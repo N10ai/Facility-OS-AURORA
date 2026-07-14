@@ -4,7 +4,8 @@ import {
   ChevronRight, CircleUserRound, ClipboardCheck, Clock, FileText, Home, Image, PackageOpen,
   LogOut, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, UsersRound, Wrench, X,
   ArrowRight, BarChart3, MapPin, TrendingUp, Boxes, ListFilter, CalendarRange,
-  DollarSign, Receipt, CreditCard, WalletCards, Banknote, Download
+  DollarSign, Receipt, CreditCard, WalletCards, Banknote, Download,
+  Mail, Phone, MapPinned, History, ContactRound, BriefcaseBusiness, UserPlus, Building, Activity
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
 import {
@@ -228,10 +229,10 @@ function AdminOverview({data,setPage}) {
         <div className="metricIcon violet"><AlertTriangle size={21}/></div>
         <span>Open issues</span><strong>{openIssues.length}</strong><small>Customer and employee reports</small>
       </button>
-      <article className="metricCard">
+      <button className="metricCard" onClick={()=>setPage('customers')}>
         <div className="metricIcon green"><TrendingUp size={21}/></div>
-        <span>Monthly recurring value</span><strong>${monthlyRevenue.toLocaleString()}</strong><small>Across active customers</small>
-      </article>
+        <span>Monthly recurring value</span><strong>${monthlyRevenue.toLocaleString()}</strong><small>{data.customers.length} active customers</small>
+      </button>
     </div>
 
     <div className="dashboardGrid">
@@ -296,12 +297,14 @@ function Empty({title,text}) {
   return <div className="empty"><div className="emptyIcon"><Sparkles size={22}/></div><strong>{title}</strong><p>{text}</p></div>;
 }
 
-function CustomersPage({data,companyId,reload}) {
+function CustomersPage({data,companyId,reload,setPage}) {
   const blank={name:'',customer_type:'commercial',email:'',phone:'',address:'',monthly_value:''};
   const [open,setOpen]=useState(false);
   const [editing,setEditing]=useState(null);
+  const [selected,setSelected]=useState(null);
   const [form,setForm]=useState(blank);
   const [message,setMessage]=useState('');
+  const [query,setQuery]=useState('');
 
   function newCustomer(){setEditing(null);setForm(blank);setMessage('');setOpen(true)}
   function editCustomer(customer){setEditing(customer);setForm({...blank,...customer});setMessage('');setOpen(true)}
@@ -314,19 +317,128 @@ function CustomersPage({data,companyId,reload}) {
   }
   async function archive(customer){
     if(!confirm(`Archive ${customer.name}?`)) return;
-    const {error}=await archiveRecord('customers',customer.id);if(error)return setMessage(error.message);await reload();
+    const {error}=await archiveRecord('customers',customer.id);if(error)return setMessage(error.message);setSelected(null);await reload();
   }
-  async function remove(customer){
-    if(!confirm(`Permanently delete ${customer.name}? This cannot be undone.`)) return;
-    const {error}=await deleteRecord('customers',customer.id);if(error)return setMessage(error.message);await reload();
+
+  const visible=data.customers.filter(c=>`${c.name} ${c.customer_type||''} ${c.email||''}`.toLowerCase().includes(query.toLowerCase()));
+
+  if(selected){
+    const customer=data.customers.find(c=>c.id===selected.id)||selected;
+    const facilities=data.facilities.filter(f=>f.customer_id===customer.id);
+    const contacts=data.contacts.filter(c=>c.customer_id===customer.id);
+    const quotes=data.quotes.filter(q=>q.customer_id===customer.id);
+    const invoices=data.invoices.filter(i=>i.customer_id===customer.id);
+    const payments=data.payments.filter(p=>p.customer_id===customer.id);
+    const workOrders=data.workOrders.filter(w=>w.customer_id===customer.id&&w.status!=='archived');
+    const issues=data.issues.filter(i=>i.customer_id===customer.id);
+    const requests=data.requests.filter(r=>r.customer_id===customer.id);
+    const totalInvoiced=invoices.reduce((s,i)=>s+Number(i.amount||0),0);
+    const totalPaid=payments.reduce((s,p)=>s+Number(p.amount||0),0);
+    const activity=[
+      ...workOrders.map(x=>({type:'work',date:x.created_at||x.scheduled_date,title:x.title,detail:`Work order · ${x.status}`})),
+      ...issues.map(x=>({type:'issue',date:x.created_at,title:x.title,detail:`Issue · ${x.status}`})),
+      ...quotes.map(x=>({type:'quote',date:x.created_at,title:x.title||x.quote_number,detail:`Quote · ${x.status}`})),
+      ...invoices.map(x=>({type:'invoice',date:x.created_at,title:x.invoice_number||'Invoice',detail:`Invoice · ${x.status}`})),
+      ...requests.map(x=>({type:'request',date:x.created_at,title:x.title,detail:`Request · ${x.status}`}))
+    ].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).slice(0,12);
+
+    return <div className="page customerWorkspace">
+      <button className="back" onClick={()=>setSelected(null)}><ArrowLeft size={18}/> Customers</button>
+      <section className="customerHero">
+        <div className="customerHeroAvatar">{customer.name?.slice(0,1)||'C'}</div>
+        <div className="grow">
+          <p className="eyebrow">Customer workspace</p>
+          <h1>{customer.name}</h1>
+          <p>{customer.customer_type||'commercial'} · {customer.address||'No address'}</p>
+          <div className="customerContactLine">
+            {customer.email&&<span><Mail size={14}/>{customer.email}</span>}
+            {customer.phone&&<span><Phone size={14}/>{customer.phone}</span>}
+          </div>
+        </div>
+        <div className="heroActions">
+          <Button variant="secondary" onClick={()=>editCustomer(customer)}>Edit</Button>
+          <Button onClick={()=>setPage('quotes')}><Plus size={16}/> New quote</Button>
+        </div>
+      </section>
+
+      <div className="stats">
+        <Stat icon={Building2} label="Facilities" value={facilities.length} note="Managed locations"/>
+        <Stat icon={ContactRound} label="Contacts" value={contacts.length} note="Customer stakeholders"/>
+        <Stat icon={ClipboardCheck} label="Work orders" value={workOrders.length} note={`${workOrders.filter(w=>w.status==='verified').length} verified`}/>
+        <Stat icon={Receipt} label="Outstanding" value={`$${Math.max(0,totalInvoiced-totalPaid).toLocaleString()}`} note={`$${totalPaid.toLocaleString()} received`}/>
+      </div>
+
+      <div className="crmWorkspaceGrid">
+        <section className="panel">
+          <div className="panelTitle"><div><p className="eyebrow">Locations</p><h2>Facilities</h2></div><button className="link" onClick={()=>setPage('facilities')}>Manage</button></div>
+          {facilities.map(f=><div className="crmEntityRow" key={f.id}>
+            <div className="crmEntityIcon"><Building2 size={18}/></div>
+            <div className="grow"><strong>{f.name}</strong><span>{f.facility_type} · {f.address||'No address'}</span></div>
+            <div className="status active">{f.status}</div>
+          </div>)}
+          {!facilities.length&&<Empty title="No facilities" text="Add the first customer facility."/>}
+        </section>
+
+        <section className="panel">
+          <div className="panelTitle"><div><p className="eyebrow">People</p><h2>Contacts</h2></div><button className="link" onClick={()=>setPage('contacts')}>Manage</button></div>
+          {contacts.map(c=><div className="crmEntityRow" key={c.id}>
+            <div className="avatar">{c.full_name?.slice(0,1)||'C'}</div>
+            <div className="grow"><strong>{c.full_name}</strong><span>{c.title||'Contact'} · {c.email||c.phone||'No contact method'}</span></div>
+          </div>)}
+          {!contacts.length&&<Empty title="No contacts" text="Add report, quote, and invoice recipients."/>}
+        </section>
+
+        <section className="panel">
+          <div className="panelTitle"><div><p className="eyebrow">Commercial</p><h2>Quotes & invoices</h2></div></div>
+          {quotes.slice(0,4).map(q=><div className="financeRow" key={q.id}><div className="financeDocIcon"><FileText size={18}/></div><div className="grow"><strong>{q.quote_number||q.title}</strong><span>{q.status}</span></div><b>${Number(q.amount||0).toLocaleString()}</b></div>)}
+          {invoices.slice(0,4).map(i=><div className="financeRow" key={i.id}><div className="financeDocIcon"><Receipt size={18}/></div><div className="grow"><strong>{i.invoice_number||'Invoice'}</strong><span>{i.status} · due {i.due_date||'not set'}</span></div><b>${Number(i.amount||0).toLocaleString()}</b></div>)}
+          {!quotes.length&&!invoices.length&&<Empty title="No commercial records" text="Quotes and invoices will appear here."/>}
+        </section>
+
+        <section className="panel">
+          <div className="panelTitle"><div><p className="eyebrow">Service health</p><h2>Issues & requests</h2></div></div>
+          {issues.filter(i=>i.status!=='closed').slice(0,5).map(i=><div className="crmEntityRow" key={i.id}><div className={`priority ${i.priority}`}/><div className="grow"><strong>{i.title}</strong><span>{i.status}</span></div></div>)}
+          {requests.slice(0,5).map(r=><div className="crmEntityRow" key={r.id}><div className="crmEntityIcon"><Wrench size={18}/></div><div className="grow"><strong>{r.title}</strong><span>{r.status}</span></div></div>)}
+          {!issues.length&&!requests.length&&<Empty title="No open needs" text="Issues and customer requests appear here."/>}
+        </section>
+      </div>
+
+      <section className="panel customerTimeline">
+        <div className="panelTitle"><div><p className="eyebrow">History</p><h2>Customer timeline</h2></div><History size={18}/></div>
+        <div className="timelineList">
+          {activity.map((item,index)=><div className="timelineItem" key={`${item.type}-${index}`}>
+            <div className={`timelineDot ${item.type}`}/>
+            <div className="timelineContent"><strong>{item.title}</strong><span>{item.detail}</span></div>
+            <time>{item.date?new Date(item.date).toLocaleDateString():'—'}</time>
+          </div>)}
+          {!activity.length&&<Empty title="No customer activity" text="Work orders, issues, quotes, and invoices will build this timeline."/>}
+        </div>
+      </section>
+
+      <div className="dangerZone"><button onClick={()=>archive(customer)}>Archive customer</button></div>
+      <Modal open={open} title={editing?'Edit customer':'New customer'} onClose={()=>setOpen(false)}><div className="form">
+        <label>Name<input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})}/></label>
+        <div className="form2"><label>Type<select value={form.customer_type||'commercial'} onChange={e=>setForm({...form,customer_type:e.target.value})}><option>commercial</option><option>logistics</option><option>medical</option><option>retail</option></select></label><label>Monthly value<input type="number" value={form.monthly_value||''} onChange={e=>setForm({...form,monthly_value:e.target.value})}/></label></div>
+        <div className="form2"><label>Email<input value={form.email||''} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Phone<input value={form.phone||''} onChange={e=>setForm({...form,phone:e.target.value})}/></label></div>
+        <label>Address<input value={form.address||''} onChange={e=>setForm({...form,address:e.target.value})}/></label>
+        {message&&<div className="notice">{message}</div>}<Button onClick={save}>Save changes</Button>
+      </div></Modal>
+    </div>;
   }
 
   return <div className="page">
-    <div className="pageHeader"><div><p className="eyebrow">CRM</p><h1>Customers</h1><p>Manage your cleaning accounts and their facilities.</p></div><Button onClick={newCustomer}><Plus size={16}/> New customer</Button></div>
+    <div className="pageHeader"><div><p className="eyebrow">CRM 2.0</p><h1>Customers</h1><p>Open a customer to see facilities, contacts, service history, quotes, invoices, and requests.</p></div><Button onClick={newCustomer}><Plus size={16}/> New customer</Button></div>
     {message&&<div className="notice">{message}</div>}
-    <div className="cards">
-      {data.customers.map(c=>{const facilities=data.facilities.filter(f=>f.customer_id===c.id);const visits=data.visits.filter(v=>v.customer_id===c.id);return <article className="objectCard" key={c.id}><div className="objectHead"><div className="objectIcon">{c.name.slice(0,1)}</div><div className="status active">active</div></div><h2>{c.name}</h2><p>{c.customer_type||'commercial'}</p><div className="miniStats"><span><b>{facilities.length}</b> facilities</span><span><b>{visits.length}</b> visits</span><span><b>${c.monthly_value||0}</b>/mo</span></div><div className="cardActions"><button onClick={()=>editCustomer(c)}>Edit</button><button onClick={()=>archive(c)}>Archive</button><button className="dangerLink" onClick={()=>remove(c)}>Delete</button></div></article>})}
-      {!data.customers.length && <Empty title="No customers" text="Create your first customer."/>}
+    <section className="crmToolbar"><div className="searchInput"><Search size={17}/><input placeholder="Search customers..." value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="crmTotals"><span>{visible.length} customers</span><strong>${visible.reduce((s,c)=>s+Number(c.monthly_value||0),0).toLocaleString()}/mo</strong></div></section>
+    <div className="customerCardGrid">
+      {visible.map(c=>{const facilities=data.facilities.filter(f=>f.customer_id===c.id);const contacts=data.contacts.filter(x=>x.customer_id===c.id);const openIssues=data.issues.filter(i=>i.customer_id===c.id&&i.status!=='closed');const balance=data.invoices.filter(i=>i.customer_id===c.id).reduce((s,i)=>s+Number(i.amount||0),0)-data.payments.filter(p=>p.customer_id===c.id).reduce((s,p)=>s+Number(p.amount||0),0);return <button className="customerCardV2" key={c.id} onClick={()=>setSelected(c)}>
+        <div className="customerCardTop"><div className="customerInitial">{c.name?.slice(0,1)||'C'}</div><div className="status active">active</div></div>
+        <h2>{c.name}</h2><p>{c.customer_type||'commercial'} · {c.email||c.phone||'No primary contact'}</p>
+        <div className="customerCardMetrics"><span><b>{facilities.length}</b> facilities</span><span><b>{contacts.length}</b> contacts</span><span className={openIssues.length?'warn':''}><b>{openIssues.length}</b> issues</span></div>
+        <div className="customerCardMoney"><div><span>Monthly value</span><strong>${Number(c.monthly_value||0).toLocaleString()}</strong></div><div><span>Balance</span><strong>${Math.max(0,balance).toLocaleString()}</strong></div></div>
+        <div className="facilityCardFooter"><span>{c.address||'No address'}</span><ChevronRight size={17}/></div>
+      </button>})}
+      {!visible.length&&<Empty title="No matching customers" text="Create a customer or change your search."/>}
     </div>
     <Modal open={open} title={editing?'Edit customer':'New customer'} onClose={()=>setOpen(false)}><div className="form">
       <label>Name<input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})}/></label>
@@ -1126,7 +1238,7 @@ export function App() {
   let content;
   if(portal==='admin') {
     if(page==='overview') content=<AdminOverview data={data} setPage={setPage}/>;
-    else if(page==='customers') content=<CustomersPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='customers') content=<CustomersPage data={data} companyId={profile.company_id} reload={reload} setPage={setPage}/>;
     else if(page==='contacts') content=<ContactsPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='facilities') content=<FacilitiesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='work-orders') content=<WorkOrdersPage data={data} companyId={profile.company_id} profile={profile} reload={reload}/>;

@@ -1,12 +1,12 @@
--- Aurora v3.5 Finance Engine
--- Additive/idempotent safeguards for existing finance tables.
+-- Aurora v3.5/v3.6 Finance Engine
+-- Additive and idempotent. Supports pre-existing tables.
 
 create table if not exists public.quotes (
  id uuid primary key default gen_random_uuid(),
  company_id uuid references public.companies(id) on delete cascade,
  customer_id uuid references public.customers(id) on delete set null,
  facility_id uuid references public.facilities(id) on delete set null,
- quote_number text, title text not null, amount numeric default 0,
+ quote_number text, title text, amount numeric default 0,
  status text default 'draft', valid_until date, notes text,
  created_at timestamptz default now()
 );
@@ -45,6 +45,60 @@ create table if not exists public.expenses (
  expense_date date default current_date, notes text,
  status text default 'recorded', created_at timestamptz default now()
 );
+
+alter table public.quotes
+  add column if not exists company_id uuid references public.companies(id) on delete cascade,
+  add column if not exists customer_id uuid references public.customers(id) on delete set null,
+  add column if not exists facility_id uuid references public.facilities(id) on delete set null,
+  add column if not exists quote_number text,
+  add column if not exists title text,
+  add column if not exists amount numeric default 0,
+  add column if not exists status text default 'draft',
+  add column if not exists valid_until date,
+  add column if not exists notes text,
+  add column if not exists created_at timestamptz default now();
+
+alter table public.invoices
+  add column if not exists company_id uuid references public.companies(id) on delete cascade,
+  add column if not exists customer_id uuid references public.customers(id) on delete set null,
+  add column if not exists facility_id uuid references public.facilities(id) on delete set null,
+  add column if not exists invoice_number text,
+  add column if not exists amount numeric default 0,
+  add column if not exists due_date date,
+  add column if not exists status text default 'draft',
+  add column if not exists notes text,
+  add column if not exists created_at timestamptz default now();
+
+alter table public.payments
+  add column if not exists company_id uuid references public.companies(id) on delete cascade,
+  add column if not exists invoice_id uuid references public.invoices(id) on delete set null,
+  add column if not exists customer_id uuid references public.customers(id) on delete set null,
+  add column if not exists amount numeric default 0,
+  add column if not exists payment_date date default current_date,
+  add column if not exists method text,
+  add column if not exists status text default 'received',
+  add column if not exists created_at timestamptz default now();
+
+alter table public.expenses
+  add column if not exists company_id uuid references public.companies(id) on delete cascade,
+  add column if not exists category text,
+  add column if not exists vendor text,
+  add column if not exists amount numeric default 0,
+  add column if not exists expense_date date default current_date,
+  add column if not exists notes text,
+  add column if not exists status text default 'recorded',
+  add column if not exists created_at timestamptz default now();
+
+alter table public.payroll_entries
+  add column if not exists company_id uuid references public.companies(id) on delete cascade,
+  add column if not exists employee_profile_id uuid references public.profiles(id) on delete set null,
+  add column if not exists period_start date,
+  add column if not exists period_end date,
+  add column if not exists hours numeric default 0,
+  add column if not exists hourly_rate numeric default 0,
+  add column if not exists gross_pay numeric default 0,
+  add column if not exists status text default 'draft',
+  add column if not exists created_at timestamptz default now();
 
 do $$
 declare t text;

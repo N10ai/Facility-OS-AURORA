@@ -1,16 +1,13 @@
 # FacilityOS Aurora
-Current release: v3.5 Finance Engine
+Current release: v3.6 CRM & Facility Knowledge Base
 
-Operational modules:
-- CRM
+Customer workspace connects:
+- Contacts
 - Facilities
-- Calendar
-- Work Orders
-- Employee missions
-- Customer service proof
-- Facility supply inventory
+- Work orders
+- Issues
+- Customer requests
 - Quotes
 - Invoices
 - Payments
-- Expenses
-- Payroll
+- Activity timeline

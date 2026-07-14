@@ -1,8 +1,10 @@
-# Upgrade to Aurora v3.5
+# Upgrade to Aurora v3.6
 
-Run this migration in Supabase SQL Editor:
+Run the updated migration in Supabase SQL Editor:
 
 `database/migrations/014_finance_engine.sql`
+
+It is additive and safe to run again. This ensures existing finance tables contain all required columns.
 
 Then:
 
@@ -12,4 +14,4 @@ npm run build
 bash scripts/restart-facilityos.sh
 ```
 
-Expected version: `3.5.0`
+Expected version: `3.6.0`
