@@ -592,6 +592,8 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
   const [selected,setSelected]=useState(null);
   const [form,setForm]=useState(blank);
   const [message,setMessage]=useState('');
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [query,setQuery]=useState('');
   const [verification,setVerification]=useState({summary:'Service completed according to the facility plan.',quality_score:100,return_note:''});
   const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
   const employees=data.people.filter(p=>['employee','manager','owner'].includes(p.role));
@@ -984,8 +986,6 @@ function CustomerRequests({profile,data,reload}) {
   const [open,setOpen]=useState(false);
   const [form,setForm]=useState({facility_id:'',request_type:'additional_service',title:'',description:''});
   const [message,setMessage]=useState('');
-  const [statusFilter,setStatusFilter]=useState('all');
-  const [query,setQuery]=useState('');
   const facilities=data.facilities.filter(f=>f.customer_id===profile.customer_id);
   async function save() {
     const {error}=await createCustomerRequest(profile.company_id,profile,form);

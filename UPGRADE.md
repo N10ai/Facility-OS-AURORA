@@ -1,8 +1,8 @@
-# Upgrade to Aurora v3.4
+# Upgrade to Aurora v3.4.1
 
-No new Supabase migration is required for this release if v3.3 migrations are already installed.
+No Supabase migration is required.
 
-After replacing project files:
+After replacing the project files:
 
 ```bash
 npm install --no-audit --no-fund --progress=false
@@ -10,10 +10,9 @@ npm run build
 bash scripts/restart-facilityos.sh
 ```
 
-Verify:
+Expected version:
 
 ```bash
 node -p "require('./package.json').version"
+# 3.4.1
 ```
-
-Expected: `3.4.0`
