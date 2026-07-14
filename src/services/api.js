@@ -47,7 +47,7 @@ export async function loadWorkspace(profile) {
     customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
     tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[],
     workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[],
-    quotes:[], invoices:[], payments:[], expenses:[], payroll:[]
+    quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[]
   };
 
   const companyId = profile.company_id;
@@ -55,7 +55,7 @@ export async function loadWorkspace(profile) {
   const [
     customers, contacts, facilities, people, plans, visits, tasks, proof, issues,
     requests, supplies, inventory, invites, workOrders, workOrderAreas, supplyUsage, timeEntries,
-    quotes, invoices, payments, expenses, payroll
+    quotes, invoices, payments, expenses, payroll, inspections, inspectionAreas, inspectionItems, inspectionPhotos
   ] = await Promise.all([
     supabase.from('customers').select('*').eq('company_id',companyId).neq('status','archived').order('name'),
     supabase.from('customer_contacts').select('*').eq('company_id',companyId).neq('status','archived').order('full_name'),
@@ -78,7 +78,11 @@ export async function loadWorkspace(profile) {
     supabase.from('invoices').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
     supabase.from('payments').select('*').eq('company_id',companyId).order('payment_date',{ascending:false}),
     supabase.from('expenses').select('*').eq('company_id',companyId).order('expense_date',{ascending:false}),
-    supabase.from('payroll_entries').select('*').eq('company_id',companyId).order('period_end',{ascending:false})
+    supabase.from('payroll_entries').select('*').eq('company_id',companyId).order('period_end',{ascending:false}),
+    supabase.from('inspections').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
+    supabase.from('inspection_areas').select('*').eq('company_id',companyId).order('sort_order'),
+    supabase.from('inspection_items').select('*').eq('company_id',companyId).order('sort_order'),
+    supabase.from('inspection_photos').select('*').eq('company_id',companyId).order('created_at',{ascending:false})
   ]);
 
   return {
@@ -89,7 +93,7 @@ export async function loadWorkspace(profile) {
     invites:invites.data||[], workOrders:workOrders.data||[], workOrderAreas:workOrderAreas.data||[],
     supplyUsage:supplyUsage.data||[], timeEntries:timeEntries.data||[],
     quotes:quotes.data||[], invoices:invoices.data||[], payments:payments.data||[],
-    expenses:expenses.data||[], payroll:payroll.data||[]
+    expenses:expenses.data||[], payroll:payroll.data||[], inspections:inspections.data||[], inspectionAreas:inspectionAreas.data||[], inspectionItems:inspectionItems.data||[], inspectionPhotos:inspectionPhotos.data||[]
   };
 }
 
@@ -689,3 +693,9 @@ export async function createPayrollEntry(companyId, form) {
     status: form.status || 'draft'
   }).select().single();
 }
+
+export async function createInspection(companyId,form,inspectorProfileId){ const {data:inspection,error}=await supabase.from('inspections').insert({company_id:companyId,customer_id:form.customer_id||null,facility_id:form.facility_id,work_order_id:form.work_order_id||null,inspector_profile_id:inspectorProfileId||null,title:form.title||'Quality Inspection',status:'in_progress',inspected_at:new Date().toISOString()}).select().single(); if(error)return{error}; const names=(form.area_names||'Reception, Restrooms, Kitchen, Offices').split(',').map(x=>x.trim()).filter(Boolean); const {data:areas,error:areaError}=await supabase.from('inspection_areas').insert(names.map((name,index)=>({company_id:companyId,inspection_id:inspection.id,facility_id:form.facility_id,area_name:name,visual_impact:index===0?'high':'medium',sort_order:index+1,status:'pending'}))).select(); if(areaError)return{error:areaError}; const templates=[['Visual presentation',1,true],['High-touch surfaces',2,false],['Floors and edges',3,true],['Trash and liners',4,false],['Final detail check',5,false]]; const rows=[]; for(const area of areas){for(const [title,sort_order,requires_photo] of templates){rows.push({company_id:companyId,inspection_area_id:area.id,title,sort_order,requires_photo,status:'pending'})}} await supabase.from('inspection_items').insert(rows); return{data:inspection,error:null};}
+export async function updateInspectionArea(id,updates){return supabase.from('inspection_areas').update({...updates,updated_at:new Date().toISOString()}).eq('id',id).select().single()}
+export async function updateInspectionItem(id,updates){return supabase.from('inspection_items').update({...updates,updated_at:new Date().toISOString()}).eq('id',id).select().single()}
+export async function completeInspection(id,overallScore,summary){return supabase.from('inspections').update({status:'completed',overall_score:Number(overallScore||0),summary:summary||null,inspected_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id).select().single()}
+export async function uploadInspectionPhoto(companyId,inspectionId,areaId,userId,file,photoType){const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${companyId}/${inspectionId}/${areaId}/${Date.now()}-${safe}`;const{error:uploadError}=await supabase.storage.from('inspection-photos').upload(path,file,{upsert:false});if(uploadError)return{error:uploadError};const{data:publicData}=supabase.storage.from('inspection-photos').getPublicUrl(path);return supabase.from('inspection_photos').insert({company_id:companyId,inspection_id:inspectionId,inspection_area_id:areaId,uploaded_by_profile_id:userId||null,photo_type:photoType||'after',file_url:publicData.publicUrl}).select().single()}
