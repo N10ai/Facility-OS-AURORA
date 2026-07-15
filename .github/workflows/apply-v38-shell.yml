@@ -24,7 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund --prefer-offline
+          registry-url: https://registry.npmjs.org
+      - name: Install dependencies from public npm
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund --package-lock=false
       - name: Production build
         run: npm run build
