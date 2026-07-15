@@ -11,6 +11,8 @@ import { configured, supabase } from '../services/supabase';
 import { OperationsCalendar } from './components/OperationsCalendar';
 import { GlobalSearch } from './components/GlobalSearch';
 import { SettingsHub } from './components/SettingsHub';
+import { PhotoLightbox } from './components/PhotoLightbox';
+import { CustomerInventory } from './components/CustomerInventory';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
@@ -150,7 +152,7 @@ const adminGroups = [
   { label:'Settings', icon:Settings, items:[['settings','Settings',Settings]] }
 ];
 const employeeNav = [['employee-home','Today',Home],['employee-schedule','Schedule',CalendarDays],['employee-history','History',CheckCircle2]];
-const customerNav = [['customer-home','Overview',Home],['customer-schedule','Schedule',CalendarDays],['customer-proof','Service Reports',FileText],['customer-requests','Requests',Wrench]];
+const customerNav = [['customer-home','Overview',Home],['customer-schedule','Schedule',CalendarDays],['customer-proof','Service Reports',FileText],['customer-inventory','Inventory',PackageOpen],['customer-requests','Requests',Wrench]];
 
 function Shell({profile,portal,setPortal,page,setPage,data,children}) {
   const [mobileSheet,setMobileSheet]=useState(null);
@@ -1143,6 +1145,7 @@ function EmployeeMission({profile,visit,data,reload,onBack}) {
   const [message,setMessage]=useState('');
   const [issueOpen,setIssueOpen]=useState(false);
   const [issue,setIssue]=useState({title:'',description:'',priority:'medium'});
+  const [photoIndex,setPhotoIndex]=useState(null);
   const tasks=data.tasks.filter(t=>t.service_visit_id===visit.id);
   const proof=data.proof.filter(p=>p.service_visit_id===visit.id);
   const facility=data.facilities.find(f=>f.id===visit.facility_id);
@@ -1179,6 +1182,8 @@ function EmployeeMission({profile,visit,data,reload,onBack}) {
       <label className="uploadTile"><Camera size={28}/><strong>Before photos</strong><span>{proof.filter(p=>p.proof_type==='before').length} uploaded</span><input type="file" accept="image/*" capture="environment" onChange={e=>fileChange(e,'before')}/></label>
       <label className="uploadTile"><Camera size={28}/><strong>After photos</strong><span>{proof.filter(p=>p.proof_type==='after').length} uploaded</span><input type="file" accept="image/*" capture="environment" onChange={e=>fileChange(e,'after')}/></label>
     </div>
+    {proof.length>0&&<section className="panel missionPhotoPanel"><div className="panelTitle"><div><p className="eyebrow">Proof</p><h2>Service photos</h2></div><span>{proof.length}</span></div><div className="missionPhotoGrid">{proof.map((photo,index)=><button key={photo.id||index} onClick={()=>setPhotoIndex(index)}><img src={photo.public_url||photo.url||photo.file_url||photo.storage_url} alt={photo.proof_type||'Service proof'}/><span>{photo.proof_type||'photo'}</span></button>)}</div></section>}
+    {photoIndex!==null&&<PhotoLightbox photos={proof} initialIndex={photoIndex} onClose={()=>setPhotoIndex(null)}/>}
     <section className="panel"><div className="panelTitle"><h2>Checklist</h2><span>{tasks.filter(t=>t.status==='completed').length}/{tasks.length}</span></div>{tasks.map(t=><label className="task" key={t.id}><input type="checkbox" checked={t.status==='completed'} onChange={()=>doTask(t)}/><div><strong>{t.title}</strong>{t.requires_proof&&<span>Proof required</span>}</div></label>)}</section>
     <div className="buttonRow"><Button variant="secondary" onClick={()=>setIssueOpen(true)}><AlertTriangle size={17}/> Report issue</Button><Button onClick={finish}><CheckCircle2 size={17}/> Submit mission</Button></div>
     {message&&<div className="notice">{message}</div>}
@@ -1296,6 +1301,7 @@ export function App() {
     content=<EmployeeWorkOrders profile={profile} data={data} reload={reload}/>;
   } else {
     if(page==='customer-proof') content=<InspectionReports profile={profile} data={data}/>;
+    else if(page==='customer-inventory') content=<CustomerInventory profile={profile} data={data}/>;
     else if(page==='customer-requests') content=<CustomerRequests profile={profile} data={data} reload={reload}/>;
     else content=<CustomerHome profile={profile} data={data}/>;
   }
