@@ -98,3 +98,4 @@ if(!css.includes('Aurora v3.8 global search and settings')) css+=styles;
 fs.writeFileSync(appPath,app);
 fs.writeFileSync(cssPath,css);
 console.log('Applied Aurora v3.8 shell integrations.');
+// workflow trigger: 2026-07-15
