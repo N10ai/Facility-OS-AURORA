@@ -10,39 +10,40 @@ function replaceOnce(from,to,label){
   app=app.replace(from,to);
 }
 
-if(!app.includes("./components/GlobalSearch")){
+const alreadyIntegrated=app.includes("./components/GlobalSearch");
+
+if(!alreadyIntegrated){
   replaceOnce(
     "import { configured, supabase } from '../services/supabase';",
     "import { configured, supabase } from '../services/supabase';\nimport { GlobalSearch } from './components/GlobalSearch';\nimport { SettingsHub } from './components/SettingsHub';",
     'component imports'
   );
-}
 
-replaceOnce(
-  "function Shell({profile,portal,setPortal,page,setPage,children}) {\n  const [mobileSheet,setMobileSheet]=useState(null);",
-  "function Shell({profile,portal,setPortal,page,setPage,data,children}) {\n  const [mobileSheet,setMobileSheet]=useState(null);\n  const [searchOpen,setSearchOpen]=useState(false);",
-  'Shell signature'
-);
+  replaceOnce(
+    "function Shell({profile,portal,setPortal,page,setPage,children}) {\n  const [mobileSheet,setMobileSheet]=useState(null);",
+    "function Shell({profile,portal,setPortal,page,setPage,data,children}) {\n  const [mobileSheet,setMobileSheet]=useState(null);\n  const [searchOpen,setSearchOpen]=useState(false);",
+    'Shell signature'
+  );
 
-replaceOnce(
-  "  function selectPage(key){setPage(key);setMobileSheet(null)}",
-  "  useEffect(()=>{\n    function shortcut(event){\n      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setSearchOpen(true)}\n      if(event.key==='Escape')setSearchOpen(false);\n    }\n    window.addEventListener('keydown',shortcut);\n    return()=>window.removeEventListener('keydown',shortcut);\n  },[]);\n\n  function selectPage(key){setPage(key);setMobileSheet(null)}",
-  'Shell shortcut'
-);
+  replaceOnce(
+    "  function selectPage(key){setPage(key);setMobileSheet(null)}",
+    "  useEffect(()=>{\n    function shortcut(event){\n      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setSearchOpen(true)}\n      if(event.key==='Escape')setSearchOpen(false);\n    }\n    window.addEventListener('keydown',shortcut);\n    return()=>window.removeEventListener('keydown',shortcut);\n  },[]);\n\n  function selectPage(key){setPage(key);setMobileSheet(null)}",
+    'Shell shortcut'
+  );
 
-replaceOnce(
-  '<header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||\'Workspace\'}</strong></div><button className="search"><Search size={18}/><span>Search anything...</span></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||\'U\'}</button></header>',
-  '<header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||\'Workspace\'}</strong></div><button className="search" onClick={()=>setSearchOpen(true)}><Search size={18}/><span>Search anything...</span><kbd>⌘K</kbd></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||\'U\'}</button></header>',
-  'top search button'
-);
+  replaceOnce(
+    '<header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||\'Workspace\'}</strong></div><button className="search"><Search size={18}/><span>Search anything...</span></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||\'U\'}</button></header>',
+    '<header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||\'Workspace\'}</strong></div><button className="search" onClick={()=>setSearchOpen(true)}><Search size={18}/><span>Search anything...</span><kbd>⌘K</kbd></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||\'U\'}</button></header>',
+    'top search button'
+  );
 
-replaceOnce(
-  "    {mobileSheet && <div className=\"mobileSheetBackdrop\"",
-  "    <GlobalSearch open={searchOpen} onClose={()=>setSearchOpen(false)} data={data} onNavigate={(targetPage)=>{setPortal('admin');setPage(targetPage)}}/>\n    {mobileSheet && <div className=\"mobileSheetBackdrop\"",
-  'GlobalSearch render'
-);
+  replaceOnce(
+    "    {mobileSheet && <div className=\"mobileSheetBackdrop\"",
+    "    <GlobalSearch open={searchOpen} onClose={()=>setSearchOpen(false)} data={data} onNavigate={(targetPage)=>{setPortal('admin');setPage(targetPage)}}/>\n    {mobileSheet && <div className=\"mobileSheetBackdrop\"",
+    'GlobalSearch render'
+  );
 
-const modernSettings=`function ModernSettingsPage(){
+  const modernSettings=`function ModernSettingsPage(){
   const [checks,setChecks]=useState([]);
   const [checking,setChecking]=useState(false);
   const [message,setMessage]=useState('');
@@ -54,27 +55,26 @@ const modernSettings=`function ModernSettingsPage(){
   }
   function openSection(section){
     const labels={company:'Company',branding:'Branding',users:'Users & roles',notifications:'Notifications',documents:'Documents',billing:'Billing',integrations:'Integrations',security:'Security',health:'System health'};
-    setMessage(`${labels[section]||'This section'} is organized and ready for its detailed controls in the next increment.`);
+    setMessage(\`${'${'}labels[section]||'This section'} is organized and ready for its detailed controls in the next increment.\`);
   }
   return <><SettingsHub healthChecks={checks} checking={checking} onRunHealthCheck={runHealthCheck} onOpenSection={openSection}/>{message&&<div className="settingsToast notice">{message}</div>}</>;
 }
 
 `;
-if(!app.includes('function ModernSettingsPage')){
   replaceOnce('function EmployeeHome({profile,data,reload}) {',modernSettings+'function EmployeeHome({profile,data,reload}) {','ModernSettingsPage insertion');
+
+  replaceOnce(
+    "    else content=<SettingsPage companyId={profile.company_id} reload={reload}/>;",
+    "    else content=<ModernSettingsPage/>;",
+    'settings route'
+  );
+
+  replaceOnce(
+    "  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage}>{content}</Shell>;",
+    "  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage} data={data}>{content}</Shell>;",
+    'Shell data prop'
+  );
 }
-
-replaceOnce(
-  "    else content=<SettingsPage companyId={profile.company_id} reload={reload}/>;",
-  "    else content=<ModernSettingsPage/>;",
-  'settings route'
-);
-
-replaceOnce(
-  "  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage}>{content}</Shell>;",
-  "  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage} data={data}>{content}</Shell>;",
-  'Shell data prop'
-);
 
 const styles=`
 
@@ -97,5 +97,4 @@ if(!css.includes('Aurora v3.8 global search and settings')) css+=styles;
 
 fs.writeFileSync(appPath,app);
 fs.writeFileSync(cssPath,css);
-console.log('Applied Aurora v3.8 shell integrations.');
-// workflow trigger: 2026-07-15
+console.log(alreadyIntegrated?'Aurora v3.8 shell already integrated.':'Applied Aurora v3.8 shell integrations.');
