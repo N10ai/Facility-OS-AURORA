@@ -8,6 +8,9 @@ import {
   Mail, Phone, MapPinned, History, ContactRound, BriefcaseBusiness, UserPlus, Building, Activity
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
+import { OperationsCalendar } from './components/OperationsCalendar';
+import { GlobalSearch } from './components/GlobalSearch';
+import { SettingsHub } from './components/SettingsHub';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
@@ -149,13 +152,23 @@ const adminGroups = [
 const employeeNav = [['employee-home','Today',Home],['employee-schedule','Schedule',CalendarDays],['employee-history','History',CheckCircle2]];
 const customerNav = [['customer-home','Overview',Home],['customer-schedule','Schedule',CalendarDays],['customer-proof','Service Reports',FileText],['customer-requests','Requests',Wrench]];
 
-function Shell({profile,portal,setPortal,page,setPage,children}) {
+function Shell({profile,portal,setPortal,page,setPage,data,children}) {
   const [mobileSheet,setMobileSheet]=useState(null);
+  const [searchOpen,setSearchOpen]=useState(false);
   const flatAdmin=adminGroups.flatMap(g=>g.items);
   const nav = portal==='admin'?flatAdmin:portal==='employee'?employeeNav:customerNav;
   const bottom = portal==='admin'
     ? [['overview','Home',Home],['crm','CRM',UsersRound],['ops','Operations',ClipboardCheck],['finance','Finance',FileText],['more','More',Menu]]
     : nav.slice(0,4);
+
+  useEffect(()=>{
+    function shortcut(event){
+      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setSearchOpen(true)}
+      if(event.key==='Escape')setSearchOpen(false);
+    }
+    window.addEventListener('keydown',shortcut);
+    return()=>window.removeEventListener('keydown',shortcut);
+  },[]);
 
   function selectPage(key){setPage(key);setMobileSheet(null)}
   function bottomClick(key){
@@ -174,10 +187,11 @@ function Shell({profile,portal,setPortal,page,setPage,children}) {
       <div className="profileCard"><div className="avatar">{profile.full_name?.slice(0,1)||'U'}</div><div><strong>{profile.full_name}</strong><span>{profile.role}</span></div></div>
     </aside>
     <main className="main">
-      <header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||'Workspace'}</strong></div><button className="search"><Search size={18}/><span>Search anything...</span></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||'U'}</button></header>
+      <header className="top"><div><span>FacilityOS</span><strong>{nav.find(x=>x[0]===page)?.[1]||'Workspace'}</strong></div><button className="search" onClick={()=>setSearchOpen(true)}><Search size={18}/><span>Search anything...</span><kbd>⌘K</kbd></button><button className="icon"><Bell size={18}/></button><button className="avatarButton">{profile.full_name?.slice(0,1)||'U'}</button></header>
       <section className="canvas">{children}</section>
     </main>
     <nav className="mobileBottom">{bottom.map(([key,label,Icon])=><button key={key} className={page===key?'active':''} onClick={()=>bottomClick(key)}><Icon size={20}/><span>{label}</span></button>)}</nav>
+    <GlobalSearch open={searchOpen} onClose={()=>setSearchOpen(false)} data={data} onNavigate={(targetPage)=>{setPortal('admin');setPage(targetPage)}}/>
     {mobileSheet && <div className="mobileSheetBackdrop" onClick={()=>setMobileSheet(null)}><section className="mobileSheet" onClick={e=>e.stopPropagation()}><div className="sheetHandle"/><h3>{mobileSheet}</h3>{(mobileSheet==='More' ? adminGroups.filter(g=>['Team','Reports','Settings'].includes(g.label)).flatMap(g=>g.items) : adminGroups.find(g=>g.label===mobileSheet)?.items||[]).map(([key,label,Icon])=><button key={key} onClick={()=>selectPage(key)}><Icon size={19}/><span>{label}</span><ChevronRight size={17}/></button>)}</section></div>}
   </div>;
 }
@@ -1090,6 +1104,23 @@ function SettingsPage({companyId,reload}) {
     <section className="panel"><div className="panelTitle"><div><h2>Infrastructure status</h2><p>Database, storage, and secure function readiness.</p></div></div>{checks.length? <div className="healthGrid">{checks.map(check=><div className={check.ok?'healthItem ok':'healthItem bad'} key={check.key}><div className="healthDot"/><div><strong>{check.label}</strong><span>{check.type} · {check.message}</span></div></div>)}</div>:<Empty title="System check not run" text="Run the check to confirm tables, photo storage, and secure user creation."/>}</section>
   </div>;
 }
+function ModernSettingsPage(){
+  const [checks,setChecks]=useState([]);
+  const [checking,setChecking]=useState(false);
+  const [message,setMessage]=useState('');
+  async function runHealthCheck(){
+    setChecking(true);setMessage('');
+    try{setChecks(await checkInfrastructure())}
+    catch(error){setMessage(error.message)}
+    finally{setChecking(false)}
+  }
+  function openSection(section){
+    const labels={company:'Company',branding:'Branding',users:'Users & roles',notifications:'Notifications',documents:'Documents',billing:'Billing',integrations:'Integrations',security:'Security',health:'System health'};
+    setMessage(`${labels[section]||'This section'} is organized and ready for its detailed controls in the next increment.`);
+  }
+  return <><SettingsHub healthChecks={checks} checking={checking} onRunHealthCheck={runHealthCheck} onOpenSection={openSection}/>{message&&<div className="settingsToast notice">{message}</div>}</>;
+}
+
 function EmployeeHome({profile,data,reload}) {
   const [mission,setMission]=useState(null);
   const today=new Date().toISOString().slice(0,10);
@@ -1247,7 +1278,7 @@ export function App() {
     else if(page==='contacts') content=<ContactsPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='facilities') content=<FacilitiesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='work-orders') content=<WorkOrdersPage data={data} companyId={profile.company_id} profile={profile} reload={reload}/>;
-    else if(page==='calendar') content=<CalendarPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='calendar') content=<OperationsCalendar data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='employees') content=<EmployeesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='issues') content=<IssuesPage data={data}/>;
     else if(page==='supplies') content=<SuppliesPage data={data} companyId={profile.company_id} reload={reload}/>;
@@ -1260,7 +1291,7 @@ export function App() {
     else if(page==='billing') content=<FinanceSummary data={data} setPage={setPage}/>;
     else if(page==='contractors') content=<ModulePlaceholder title="Contractors" description="Manage outsourced cleaners, plumbers, electricians, and other service partners."/>;
     else if(page==='reports') content=<ModulePlaceholder title="Reports" description="Operations, proof-of-service, customer, financial, and employee performance reports."/>;
-    else content=<SettingsPage companyId={profile.company_id} reload={reload}/>;
+    else content=<ModernSettingsPage/>;
   } else if(portal==='employee') {
     content=<EmployeeWorkOrders profile={profile} data={data} reload={reload}/>;
   } else {
@@ -1269,5 +1300,5 @@ export function App() {
     else content=<CustomerHome profile={profile} data={data}/>;
   }
 
-  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage}>{content}</Shell>;
+  return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage} data={data}>{content}</Shell>;
 }

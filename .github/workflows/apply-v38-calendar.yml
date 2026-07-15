@@ -1,0 +1,45 @@
+name: Apply Aurora v3.8 calendar integration
+
+on:
+  push:
+    branches:
+      - feature/aurora-v3.8-operations-pulse
+    paths:
+      - src/app/components/OperationsCalendar.jsx
+      - scripts/apply-v38-calendar.mjs
+      - .github/workflows/apply-v38-calendar.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/aurora-v3.8-operations-pulse
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply calendar patch
+        run: node scripts/apply-v38-calendar.mjs
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build Aurora
+        run: npm run build
+      - name: Commit calendar integration
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add src/app/App.jsx src/styles/app.css
+          git commit -m "Wire v3.8 interactive operations calendar"
+          git push origin HEAD:feature/aurora-v3.8-operations-pulse

@@ -1,0 +1,33 @@
+name: Validate Aurora v3.8
+
+on:
+  push:
+    branches:
+      - feature/aurora-v3.8-operations-pulse
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/aurora-v3.8-operations-pulse
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Install dependencies from public npm
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund --package-lock=false
+      - name: Production build
+        run: npm run build
