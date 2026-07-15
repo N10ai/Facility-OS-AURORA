@@ -5,34 +5,48 @@ const cssPath='src/styles/app.css';
 let app=fs.readFileSync(appPath,'utf8');
 let css=fs.readFileSync(cssPath,'utf8');
 
-function replaceOnce(from,to,label){
+function replaceRequired(from,to,label){
   if(!app.includes(from)) throw new Error(`Missing marker: ${label}`);
   app=app.replace(from,to);
 }
 
 if(!app.includes("./components/CustomerReportGallery")){
-  replaceOnce(
+  replaceRequired(
     "import { CustomerInventory } from './components/CustomerInventory';",
     "import { CustomerInventory } from './components/CustomerInventory';\nimport { CustomerReportGallery } from './components/CustomerReportGallery';",
     'customer report import'
   );
 }
 
-replaceOnce(
-  "  const mine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived'&&order.scheduled_date>=today);",
-  "  const mine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived');\n  const todayMine=mine.filter(order=>order.scheduled_date===today&&order.status!=='verified');\n  const upcomingMine=mine.filter(order=>order.scheduled_date>today&&order.status!=='verified').sort((a,b)=>(`${a.scheduled_date} ${a.scheduled_time||''}`).localeCompare(`${b.scheduled_date} ${b.scheduled_time||''}`));\n  const historyMine=mine.filter(order=>order.status==='verified'||order.scheduled_date<today).sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));",
-  'employee collections'
-);
+const employeeStart=app.indexOf('function EmployeeWorkOrders({profile,data,reload})');
+const employeeEnd=app.indexOf('function ScoreRing',employeeStart);
+if(employeeStart<0||employeeEnd<0) throw new Error('EmployeeWorkOrders function not found');
+let employee=app.slice(employeeStart,employeeEnd);
 
-const oldReturn = `  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Employee Portal</p><h1>Today's missions</h1><p>Complete each assigned work order area by area.</p></div></div><div className="missionCards">{mine.map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button className="missionCard" key={order.id} onClick={()=>setSelected(order)}><div className="missionTime">{order.scheduled_date} · {order.scheduled_time||'Any time'}</div><h2>{order.title}</h2><p>{facility?.name}</p><div className={\`status \${order.status}\`}>{order.status}</div></button>})}{!mine.length&&<Empty title="No assigned work orders" text="Assigned missions will appear here."/>}</div></div>;`;
-const newReturn = `  function missionCard(order){const facility=data.facilities.find(f=>f.id===order.facility_id);const areas=data.workOrderAreas.filter(a=>a.work_order_id===order.id);const complete=areas.filter(a=>a.status==='completed').length;const progress=areas.length?Math.round(complete/areas.length*100):0;return <button className="employeeMissionCard" key={order.id} onClick={()=>setSelected(order)}><div className="employeeMissionCardTop"><div><span>{order.scheduled_time||'Any time'}</span><strong>{order.title}</strong></div><div className={\`status \${order.status}\`}>{order.status.replaceAll('_',' ')}</div></div><p>{facility?.name||'Facility'} · {order.estimated_minutes||90} min</p><div className="employeeProgressTrack"><div style={{width:\`${progress}%\`}}/></div><small>{complete}/{areas.length} areas complete</small></button>}\n  return <div className="page employeeWorkspaceV39"><div className="pageHeader"><div><p className="eyebrow">Employee workspace</p><h1>My work</h1><p>See today's missions, what is coming next, and your verified history.</p></div><div className="employeeTodayBadge"><strong>{todayMine.length}</strong><span>today</span></div></div><section className="employeeTodaySection"><div className="panelTitle"><div><p className="eyebrow">Today</p><h2>Active missions</h2></div><span>{today}</span></div><div className="employeeMissionGrid">{todayMine.map(missionCard)}{!todayMine.length&&<Empty title="No missions today" text="New assignments will appear here automatically."/>}</div></section><div className="employeeWorkspaceGrid"><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Next</p><h2>Upcoming</h2></div><span>{upcomingMine.length}</span></div><div className="employeeCompactMissions">{upcomingMine.slice(0,8).map(missionCard)}{!upcomingMine.length&&<Empty title="Nothing upcoming" text="Your schedule is clear after today."/>}</div></section><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Completed</p><h2>History</h2></div><span>{historyMine.length}</span></div><div className="employeeHistory">{historyMine.slice(0,10).map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button key={order.id} onClick={()=>setSelected(order)}><CheckCircle2 size={18}/><div><strong>{order.title}</strong><span>{facility?.name||'Facility'} · {order.scheduled_date}</span></div><div className={\`status \${order.status}\`}>{order.status}</div></button>})}{!historyMine.length&&<Empty title="No history yet" text="Verified missions will appear here."/>}</div></section></div></div>;`;
-replaceOnce(oldReturn,newReturn,'employee workspace return');
+if(!employee.includes('const todayMine=')){
+  employee=employee.replace(
+    "  const mine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived'&&order.scheduled_date>=today);",
+    "  const mine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived');\n  const todayMine=mine.filter(order=>order.scheduled_date===today&&order.status!=='verified');\n  const upcomingMine=mine.filter(order=>order.scheduled_date>today&&order.status!=='verified').sort((a,b)=>(`${a.scheduled_date} ${a.scheduled_time||''}`).localeCompare(`${b.scheduled_date} ${b.scheduled_time||''}`));\n  const historyMine=mine.filter(order=>order.status==='verified'||order.scheduled_date<today).sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));"
+  );
+}
 
-replaceOnce(
-  "    if(page==='customer-proof') content=<InspectionReports profile={profile} data={data}/>;",
-  "    if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;",
-  'customer reports route'
-);
+if(!employee.includes('employeeWorkspaceV39')){
+  const finalReturn=employee.lastIndexOf('  return <div className="page">');
+  const closing=employee.lastIndexOf('\n}');
+  if(finalReturn<0||closing<finalReturn) throw new Error('Employee list return not found');
+  const newReturn=`  function missionCard(order){const facility=data.facilities.find(f=>f.id===order.facility_id);const areas=data.workOrderAreas.filter(a=>a.work_order_id===order.id);const complete=areas.filter(a=>a.status==='completed').length;const progress=areas.length?Math.round(complete/areas.length*100):0;return <button className="employeeMissionCard" key={order.id} onClick={()=>setSelected(order)}><div className="employeeMissionCardTop"><div><span>{order.scheduled_time||'Any time'}</span><strong>{order.title}</strong></div><div className={\`status \${order.status}\`}>{order.status.replaceAll('_',' ')}</div></div><p>{facility?.name||'Facility'} · {order.estimated_minutes||90} min</p><div className="employeeProgressTrack"><div style={{width:\`${progress}%\`}}/></div><small>{complete}/{areas.length} areas complete</small></button>}\n  return <div className="page employeeWorkspaceV39"><div className="pageHeader"><div><p className="eyebrow">Employee workspace</p><h1>My work</h1><p>See today's missions, what is coming next, and your verified history.</p></div><div className="employeeTodayBadge"><strong>{todayMine.length}</strong><span>today</span></div></div><section className="employeeTodaySection"><div className="panelTitle"><div><p className="eyebrow">Today</p><h2>Active missions</h2></div><span>{today}</span></div><div className="employeeMissionGrid">{todayMine.map(missionCard)}{!todayMine.length&&<Empty title="No missions today" text="New assignments will appear here automatically."/>}</div></section><div className="employeeWorkspaceGrid"><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Next</p><h2>Upcoming</h2></div><span>{upcomingMine.length}</span></div><div className="employeeCompactMissions">{upcomingMine.slice(0,8).map(missionCard)}{!upcomingMine.length&&<Empty title="Nothing upcoming" text="Your schedule is clear after today."/>}</div></section><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Completed</p><h2>History</h2></div><span>{historyMine.length}</span></div><div className="employeeHistory">{historyMine.slice(0,10).map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button key={order.id} onClick={()=>setSelected(order)}><CheckCircle2 size={18}/><div><strong>{order.title}</strong><span>{facility?.name||'Facility'} · {order.scheduled_date}</span></div><div className={\`status \${order.status}\`}>{order.status}</div></button>})}{!historyMine.length&&<Empty title="No history yet" text="Verified missions will appear here."/>}</div></section></div></div>;`;
+  employee=employee.slice(0,finalReturn)+newReturn+employee.slice(closing);
+}
+app=app.slice(0,employeeStart)+employee+app.slice(employeeEnd);
+
+if(app.includes("if(page==='customer-proof') content=<InspectionReports profile={profile} data={data}/>;")){
+  app=app.replace(
+    "if(page==='customer-proof') content=<InspectionReports profile={profile} data={data}/>;",
+    "if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;"
+  );
+}else if(!app.includes("if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;")){
+  throw new Error('Customer report route not found');
+}
 
 const styles=`
 
