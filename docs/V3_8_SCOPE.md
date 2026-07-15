@@ -1,11 +1,11 @@
-# Aurora v3.8 Scope
+# Aurora v3.8.0 Scope
 
-This release focuses on a complete operational test loop and major UX improvements.
+This release improves the shared Aurora experience without replacing existing operational workflows.
 
-- Admin creates and assigns work orders.
-- Employee executes the assigned mission.
-- Manager verifies or returns the work.
-- Customer reviews the verified report.
-- Calendar becomes easier to create, edit, filter, and reschedule work.
-- Forms use grouped sections, better defaults, and clearer actions.
-- Navigation, settings, and global search are modernized.
+- Functional global search across core records.
+- Cleaner navigation access through the existing app shell.
+- Redesigned Settings hub without the obsolete MIP starter-profile screen.
+- Interactive operations calendar for creating, editing, filtering, and rescheduling work orders.
+- Grouped work-order input sections with clearer actions.
+- Existing admin assignment, employee execution, manager verification, and customer report flows preserved for live testing.
+- Automated production build validation through GitHub Actions.
