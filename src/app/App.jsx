@@ -14,6 +14,7 @@ import { SettingsHub } from './components/SettingsHub';
 import { PhotoLightbox } from './components/PhotoLightbox';
 import { CustomerInventory } from './components/CustomerInventory';
 import { CustomerReportGallery } from './components/CustomerReportGallery';
+import { EmployeeWorkspace } from './components/EmployeeWorkspace';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
@@ -1304,7 +1305,7 @@ export function App() {
     else if(page==='reports') content=<ModulePlaceholder title="Reports" description="Operations, proof-of-service, customer, financial, and employee performance reports."/>;
     else content=<ModernSettingsPage/>;
   } else if(portal==='employee') {
-    content=<EmployeeWorkOrders profile={profile} data={data} reload={reload}/>;
+    content=<EmployeeWorkspace profile={profile} data={data} reload={reload}/>;
   } else {
     if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;
     else if(page==='customer-inventory') content=<CustomerInventory profile={profile} data={data}/>;
