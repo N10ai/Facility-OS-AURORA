@@ -1,13 +1,17 @@
-# Aurora v3.8 Progress
+# Aurora v3.8.0
 
-Current branch: `feature/aurora-v3.8-operations-pulse`
+Release branch: `feature/aurora-v3.8-operations-pulse`
 
-## In progress
-- Functional global search
-- Redesigned settings hub
-- Navigation cleanup
-- Employee/customer operational workflow
-- Calendar and form UX improvements
+## Included
+- Functional global search from the header and Cmd/Ctrl+K.
+- Search across customers, contacts, facilities, work orders, inspections, issues, quotes, and invoices.
+- Redesigned Settings hub with the obsolete MIP starter-profile route removed.
+- Interactive operations calendar with month navigation and operational filters.
+- Create and edit work orders directly from the calendar.
+- Drag work orders to another date to reschedule them.
+- Grouped, focused calendar forms with clearer actions.
+- Existing admin, employee, manager-verification, and customer-report workflows preserved.
+- Public-registry GitHub Actions production-build validation.
 
-## Validation gate
-The release is not ready to merge until the production build passes and the admin, employee, and customer routes are verified.
+## Validation
+- Production build passed for Aurora v3.8.0.
