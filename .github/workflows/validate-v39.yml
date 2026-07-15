@@ -25,8 +25,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Validate integration scripts
+        run: |
+          node --check scripts/apply-v39-role-workflows.mjs
+          node --check scripts/apply-v39-employee-manager.mjs
       - name: Apply v3.9 integration
-        run: node scripts/apply-v39-role-workflows.mjs
+        run: |
+          node scripts/apply-v39-role-workflows.mjs
+          node scripts/apply-v39-employee-manager.mjs
       - name: Commit integrated app
         run: |
           if git diff --quiet; then
