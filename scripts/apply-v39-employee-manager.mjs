@@ -5,36 +5,39 @@ const cssPath='src/styles/app.css';
 let app=fs.readFileSync(appPath,'utf8');
 let css=fs.readFileSync(cssPath,'utf8');
 
-function replaceOnce(from,to,label){
-  if(!app.includes(from)) throw new Error(`Missing marker: ${label}`);
-  app=app.replace(from,to);
+function replaceRequired(pattern,replacement,label){
+  if(!pattern.test(app)) throw new Error(`Missing marker: ${label}`);
+  app=app.replace(pattern,replacement);
 }
 
 if(!app.includes('const historyMine=allMine.filter')){
-  replaceOnce(
-    "  const mine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived'&&order.scheduled_date>=today);",
+  replaceRequired(
+    /  const mine=data\.workOrders\.filter\(order=>order\.assigned_to_profile_id===profile\.id&&order\.status!==['"]archived['"]&&order\.scheduled_date>=today\);/,
     "  const allMine=data.workOrders.filter(order=>order.assigned_to_profile_id===profile.id&&order.status!=='archived');\n  const todayMine=allMine.filter(order=>order.scheduled_date===today&&!['verified'].includes(order.status));\n  const upcomingMine=allMine.filter(order=>order.scheduled_date>today&&!['verified'].includes(order.status)).sort((a,b)=>`${a.scheduled_date||''} ${a.scheduled_time||''}`.localeCompare(`${b.scheduled_date||''} ${b.scheduled_time||''}`));\n  const historyMine=allMine.filter(order=>order.status==='verified'||order.scheduled_date<today).sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));",
     'employee collections'
   );
 
-  const oldReturn=`  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Employee Portal</p><h1>Today's missions</h1><p>Complete each assigned work order area by area.</p></div></div><div className="missionCards">{mine.map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button className="missionCard" key={order.id} onClick={()=>setSelected(order)}><div className="missionTime">{order.scheduled_date} · {order.scheduled_time||'Any time'}</div><h2>{order.title}</h2><p>{facility?.name}</p><div className={\`status \${order.status}\`}>{order.status}</div></button>})}{!mine.length&&<Empty title="No assigned work orders" text="Assigned missions will appear here."/>}</div></div>;`;
   const newReturn=`  function missionCard(order){const facility=data.facilities.find(f=>f.id===order.facility_id);const areas=data.workOrderAreas.filter(a=>a.work_order_id===order.id);const done=areas.filter(a=>a.status==='completed').length;const progress=areas.length?Math.round(done/areas.length*100):0;return <button className="employeeMissionCard" key={order.id} onClick={()=>setSelected(order)}><div className="employeeMissionTop"><div><span>{order.scheduled_time||'Any time'}</span><strong>{order.title}</strong></div><div className={\`status \${order.status}\`}>{order.status.replaceAll('_',' ')}</div></div><p>{facility?.name||'Facility'} · {order.estimated_minutes||90} min</p><div className="employeeMissionProgress"><div style={{width:\`${progress}%\`}}/><span>{done}/{areas.length} areas</span></div></button>}\n  return <div className="page employeeWorkspace"><div className="pageHeader"><div><p className="eyebrow">Employee workspace</p><h1>My work</h1><p>Complete today's missions, review what is next, and see verified history.</p></div><div className="employeeTodayCount"><strong>{todayMine.length}</strong><span>today</span></div></div><section className="employeeTodayPanel"><div className="panelTitle"><div><p className="eyebrow">Today</p><h2>Active missions</h2></div><span>{today}</span></div><div className="employeeMissionGrid">{todayMine.map(missionCard)}{!todayMine.length&&<Empty title="No missions today" text="New assignments will appear here automatically."/>}</div></section><div className="employeeWorkspaceColumns"><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Next</p><h2>Upcoming</h2></div><span>{upcomingMine.length}</span></div><div className="employeeCompactList">{upcomingMine.slice(0,8).map(missionCard)}{!upcomingMine.length&&<Empty title="Nothing upcoming" text="Your schedule is clear after today."/>}</div></section><section className="panel"><div className="panelTitle"><div><p className="eyebrow">Completed</p><h2>History</h2></div><span>{historyMine.length}</span></div><div className="employeeHistoryList">{historyMine.slice(0,10).map(order=>{const facility=data.facilities.find(f=>f.id===order.facility_id);return <button key={order.id} onClick={()=>setSelected(order)}><CheckCircle2 size={18}/><div><strong>{order.title}</strong><span>{facility?.name||'Facility'} · {order.scheduled_date}</span></div><div className={\`status \${order.status}\`}>{order.status}</div></button>})}{!historyMine.length&&<Empty title="No completed history" text="Verified missions will appear here."/>}</div></section></div></div>;`;
-  replaceOnce(oldReturn,newReturn,'employee workspace return');
+  replaceRequired(
+    /  return <div className="page"><div className="pageHeader"><div><p className="eyebrow">Employee Portal<\/p><h1>Today's missions<\/h1>[\s\S]*?<\/div><\/div>;\n}\n\n\nfunction ScoreRing/,
+    `${newReturn}\n}\n\n\nfunction ScoreRing`,
+    'employee workspace return'
+  );
 }
 
 if(!app.includes('const [managerPhotoIndex,setManagerPhotoIndex]')){
-  replaceOnce(
-    "  const [verification,setVerification]=useState({summary:'Service completed according to the facility plan.',quality_score:100,return_note:''});",
+  replaceRequired(
+    /  const \[verification,setVerification\]=useState\(\{summary:'Service completed according to the facility plan\.',quality_score:100,return_note:''\}\);/,
     "  const [verification,setVerification]=useState({summary:'Service completed according to the facility plan.',quality_score:100,return_note:''});\n  const [managerPhotoIndex,setManagerPhotoIndex]=useState(null);",
     'manager photo state'
   );
-  replaceOnce(
-    "    const usage=data.supplyUsage.filter(item=>item.work_order_id===current.id);",
+  replaceRequired(
+    /    const usage=data\.supplyUsage\.filter\(item=>item\.work_order_id===current\.id\);/,
     "    const usage=data.supplyUsage.filter(item=>item.work_order_id===current.id);\n    const relatedInspections=data.inspections.filter(i=>i.work_order_id===current.id);\n    const managerPhotos=data.inspectionPhotos.filter(p=>relatedInspections.some(i=>i.id===p.inspection_id));",
     'manager photo collection'
   );
-  replaceOnce(
-    "      {current.status==='awaiting_verification'&&<section className=\"panel verificationPanel\">",
+  replaceRequired(
+    /      \{current\.status==='awaiting_verification'&&<section className="panel verificationPanel">/,
     "      {managerPhotos.length>0&&<section className=\"panel managerPhotoReview\"><div className=\"panelTitle\"><div><p className=\"eyebrow\">Evidence review</p><h2>Inspection photos</h2></div><span>{managerPhotos.length}</span></div><div className=\"missionPhotoGrid\">{managerPhotos.map((photo,index)=><button key={photo.id||index} onClick={()=>setManagerPhotoIndex(index)}><img src={photo.file_url||photo.public_url||photo.url} alt={photo.photo_type||'Inspection evidence'}/><span>{photo.photo_type||'photo'}</span></button>)}</div></section>}\n      {managerPhotoIndex!==null&&<PhotoLightbox photos={managerPhotos} initialIndex={managerPhotoIndex} onClose={()=>setManagerPhotoIndex(null)}/>}\n      {current.status==='awaiting_verification'&&<section className=\"panel verificationPanel\">",
     'manager photo review'
   );
