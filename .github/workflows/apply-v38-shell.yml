@@ -1,13 +1,9 @@
-name: Finalize Aurora v3.8
+name: Validate Aurora v3.8
 
 on:
   push:
     branches:
       - feature/aurora-v3.8-operations-pulse
-    paths:
-      - scripts/apply-v38-shell.mjs
-      - scripts/apply-v38-calendar.mjs
-      - .github/workflows/apply-v38-shell.yml
   pull_request:
     branches:
       - main
@@ -15,40 +11,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  integrate-and-build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/aurora-v3.8-operations-pulse
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - name: Validate generator syntax
-        run: |
-          node --check scripts/apply-v38-shell.mjs
-          node --check scripts/apply-v38-calendar.mjs
-      - name: Apply shell and settings
-        run: node scripts/apply-v38-shell.mjs
-      - name: Apply operations calendar
-        run: node scripts/apply-v38-calendar.mjs
-      - name: Commit generated app
-        run: |
-          if git diff --quiet; then
-            echo "No generated changes to commit."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/app/App.jsx src/styles/app.css
-            git commit -m "Integrate Aurora v3.8 application experience"
-            git push origin HEAD:feature/aurora-v3.8-operations-pulse
-          fi
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Production build
