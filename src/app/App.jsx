@@ -8,6 +8,7 @@ import {
   Mail, Phone, MapPinned, History, ContactRound, BriefcaseBusiness, UserPlus, Building, Activity
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
+import { OperationsCalendar } from './components/OperationsCalendar';
 import { GlobalSearch } from './components/GlobalSearch';
 import { SettingsHub } from './components/SettingsHub';
 import {
@@ -1277,7 +1278,7 @@ export function App() {
     else if(page==='contacts') content=<ContactsPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='facilities') content=<FacilitiesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='work-orders') content=<WorkOrdersPage data={data} companyId={profile.company_id} profile={profile} reload={reload}/>;
-    else if(page==='calendar') content=<CalendarPage data={data} companyId={profile.company_id} reload={reload}/>;
+    else if(page==='calendar') content=<OperationsCalendar data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='employees') content=<EmployeesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='issues') content=<IssuesPage data={data}/>;
     else if(page==='supplies') content=<SuppliesPage data={data} companyId={profile.company_id} reload={reload}/>;
