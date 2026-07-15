@@ -7,7 +7,6 @@ on:
     paths:
       - scripts/apply-v38-shell.mjs
       - scripts/apply-v38-calendar.mjs
-      - scripts/apply-v38-employee.mjs
       - .github/workflows/apply-v38-shell.yml
   pull_request:
     branches:
@@ -35,13 +34,10 @@ jobs:
         run: |
           node --check scripts/apply-v38-shell.mjs
           node --check scripts/apply-v38-calendar.mjs
-          node --check scripts/apply-v38-employee.mjs
       - name: Apply shell and settings
         run: node scripts/apply-v38-shell.mjs
       - name: Apply operations calendar
         run: node scripts/apply-v38-calendar.mjs
-      - name: Apply employee workspace
-        run: node scripts/apply-v38-employee.mjs
       - name: Commit generated app
         run: |
           if git diff --quiet; then
