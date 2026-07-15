@@ -29,13 +29,13 @@ jobs:
         run: |
           node --check scripts/apply-v39-role-workflows.mjs
           node --check scripts/apply-v39-employee-manager.mjs
-          node --check scripts/apply-v39-employee-reports.mjs
+          node --check scripts/apply-v39-employee-workspace-component.mjs
       - name: Apply photo and inventory integration
         run: node scripts/apply-v39-role-workflows.mjs
       - name: Apply manager integration
         run: node scripts/apply-v39-employee-manager.mjs
-      - name: Apply employee workspace and customer reports
-        run: node scripts/apply-v39-employee-reports.mjs
+      - name: Wire employee workspace
+        run: node scripts/apply-v39-employee-workspace-component.mjs
       - name: Commit integrated app
         run: |
           if git diff --quiet; then
@@ -44,7 +44,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add src/app/App.jsx src/styles/app.css
-            git commit -m "Integrate Aurora v3.9 employee and customer experience"
+            git commit -m "Integrate Aurora v3.9 employee workspace"
             git push origin HEAD:feature/aurora-v3.9-role-workflows
           fi
       - name: Install dependencies from public npm
