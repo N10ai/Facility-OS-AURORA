@@ -1,0 +1,43 @@
+name: Apply Aurora v3.8 shell integration
+
+on:
+  push:
+    branches:
+      - feature/aurora-v3.8-operations-pulse
+    paths:
+      - scripts/apply-v38-shell.mjs
+      - .github/workflows/apply-v38-shell.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/aurora-v3.8-operations-pulse
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply shell patch
+        run: node scripts/apply-v38-shell.mjs
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build Aurora
+        run: npm run build
+      - name: Commit generated integration
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/App.jsx src/styles/app.css
+          git commit -m "Wire v3.8 global search and settings hub"
+          git push origin HEAD:feature/aurora-v3.8-operations-pulse
