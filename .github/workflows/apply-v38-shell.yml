@@ -7,10 +7,6 @@ on:
     paths:
       - scripts/apply-v38-shell.mjs
       - .github/workflows/apply-v38-shell.yml
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -27,22 +23,22 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - name: Apply shell patch
         run: node scripts/apply-v38-shell.mjs
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Build Aurora
-        run: npm run build
       - name: Commit generated integration
         run: |
           if git diff --quiet; then
             echo "No generated changes to commit."
-            exit 0
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/app/App.jsx src/styles/app.css
+            git commit -m "Wire v3.8 global search and settings hub"
+            git push origin HEAD:feature/aurora-v3.8-operations-pulse
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/App.jsx src/styles/app.css
-          git commit -m "Wire v3.8 global search and settings hub"
-          git push origin HEAD:feature/aurora-v3.8-operations-pulse
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build Aurora
+        run: npm run build
