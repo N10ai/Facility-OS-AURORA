@@ -725,6 +725,7 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
   const [statusFilter,setStatusFilter]=useState('all');
   const [query,setQuery]=useState('');
   const [verification,setVerification]=useState({summary:'Service completed according to the facility plan.',quality_score:100,return_note:''});
+  const [managerPhotoIndex,setManagerPhotoIndex]=useState(null);
   const facilities=data.facilities.filter(f=>!form.customer_id||f.customer_id===form.customer_id);
   const employees=data.people.filter(p=>['employee','manager','owner'].includes(p.role));
   const customer=id=>data.customers.find(c=>c.id===id);
@@ -766,6 +767,8 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
     const current=data.workOrders.find(order=>order.id===selected.id)||selected;
     const areas=data.workOrderAreas.filter(a=>a.work_order_id===current.id);
     const usage=data.supplyUsage.filter(item=>item.work_order_id===current.id);
+    const relatedInspections=data.inspections.filter(i=>i.work_order_id===current.id);
+    const managerPhotos=data.inspectionPhotos.filter(p=>relatedInspections.some(i=>i.id===p.inspection_id));
     const entries=data.timeEntries.filter(item=>item.work_order_id===current.id);
     const completed=areas.filter(a=>a.status==='completed').length;
     const progress=areas.length?Math.round(completed/areas.length*100):0;
@@ -785,6 +788,8 @@ function WorkOrdersPage({data,companyId,profile,reload}) {
         <section className="panel"><div className="panelTitle"><h2>Areas</h2><span>{completed}/{areas.length}</span></div>{areas.map(area=><div className="areaAdminRow" key={area.id}><div><strong>{area.name}</strong><span>{area.completed_at?new Date(area.completed_at).toLocaleString():area.status}</span></div><div className={`status ${area.status}`}>{area.status}</div></div>)}{!areas.length&&<Empty title="No areas" text="Add areas when creating the work order."/>}</section>
         <section className="panel"><h2>Mission evidence</h2><p>{current.instructions||facility(current.facility_id)?.access_notes||'No special instructions.'}</p><div className="reportFacts"><span><b>{usage.length}</b> supply entries</span><span><b>{entries.length}</b> time entries</span><span><b>{current.quality_score||'—'}</b> quality score</span></div>{current.manager_note&&<div className="returnNote"><strong>Manager note</strong><p>{current.manager_note}</p></div>}</section>
       </div>
+      {managerPhotos.length>0&&<section className="panel managerPhotoReview"><div className="panelTitle"><div><p className="eyebrow">Evidence review</p><h2>Inspection photos</h2></div><span>{managerPhotos.length}</span></div><div className="missionPhotoGrid">{managerPhotos.map((photo,index)=><button key={photo.id||index} onClick={()=>setManagerPhotoIndex(index)}><img src={photo.file_url||photo.public_url||photo.url} alt={photo.photo_type||'Inspection evidence'}/><span>{photo.photo_type||'photo'}</span></button>)}</div></section>}
+      {managerPhotoIndex!==null&&<PhotoLightbox photos={managerPhotos} initialIndex={managerPhotoIndex} onClose={()=>setManagerPhotoIndex(null)}/>}
       {current.status==='awaiting_verification'&&<section className="panel verificationPanel"><div className="panelTitle"><div><p className="eyebrow">Manager verification</p><h2>Approve customer report</h2></div><ShieldCheck size={24}/></div><label>Customer-facing summary<textarea value={verification.summary} onChange={e=>setVerification({...verification,summary:e.target.value})}/></label><div className="form2"><label>Quality score<input type="number" min="0" max="100" value={verification.quality_score} onChange={e=>setVerification({...verification,quality_score:e.target.value})}/></label><label>Correction note<textarea value={verification.return_note} onChange={e=>setVerification({...verification,return_note:e.target.value})}/></label></div><div className="buttonRow"><Button variant="secondary" onClick={()=>sendBack(current)}>Return for correction</Button><Button onClick={()=>approve(current)}><ShieldCheck size={17}/> Verify and release report</Button></div></section>}
       {current.status==='verified'&&<section className="serviceReport"><div className="reportHeader"><div><p className="eyebrow">Verified service report</p><h2>{facility(current.facility_id)?.name}</h2><p>{current.customer_summary||'Service completed and verified.'}</p></div><div className="qualityRing">{current.quality_score||100}<small>/100</small></div></div><div className="reportFacts"><span><b>{current.scheduled_date}</b> service date</span><span><b>{actualMinutes||current.estimated_minutes||0} min</b> time</span><span><b>{completed}</b> areas completed</span><span><b>{usage.length}</b> supply entries</span></div></section>}
       <Button variant="ghost" onClick={()=>archive(current)}>Archive</Button>
