@@ -55,7 +55,7 @@ if(!alreadyIntegrated){
   }
   function openSection(section){
     const labels={company:'Company',branding:'Branding',users:'Users & roles',notifications:'Notifications',documents:'Documents',billing:'Billing',integrations:'Integrations',security:'Security',health:'System health'};
-    setMessage(\`${'${'}labels[section]||'This section'} is organized and ready for its detailed controls in the next increment.\`);
+    setMessage((labels[section]||'This section')+' is organized and ready for its detailed controls in the next increment.');
   }
   return <><SettingsHub healthChecks={checks} checking={checking} onRunHealthCheck={runHealthCheck} onOpenSection={openSection}/>{message&&<div className="settingsToast notice">{message}</div>}</>;
 }
