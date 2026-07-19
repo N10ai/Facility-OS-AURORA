@@ -1313,6 +1313,8 @@ export function App() {
     content=<EmployeeWorkspace profile={profile} data={data} reload={reload}/>;
   } else {
     if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;
+    else if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;
+    else if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;
     else if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;
     else if(page==='customer-inventory') content=<CustomerInventory profile={profile} data={data}/>;
     else if(page==='customer-requests') content=<CustomerRequests profile={profile} data={data} reload={reload}/>;
