@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, ChevronDown, Clock3, FileText, Receipt, WalletCards } from 'lucide-react';
+import { Check, CheckCircle2, ChevronDown, Clock3, FileText, Receipt, WalletCards, X } from 'lucide-react';
+import { supabase } from '../../services/supabase';
 import './CustomerFinance.css';
 
 function money(value) {
@@ -16,22 +17,36 @@ function EmptyFinance({ title, text }) {
   return <div className="cfEmpty"><FileText size={26}/><strong>{title}</strong><span>{text}</span></div>;
 }
 
-export function CustomerFinance({ profile, data }) {
+export function CustomerFinance({ profile, data, reload }) {
   const [tab, setTab] = useState('invoices');
   const [expanded, setExpanded] = useState(null);
+  const [decisionId, setDecisionId] = useState(null);
+  const [message, setMessage] = useState('');
   const invoices = useMemo(() => data.invoices.filter(item => item.customer_id === profile.customer_id), [data.invoices, profile.customer_id]);
-  const quotes = useMemo(() => data.quotes.filter(item => item.customer_id === profile.customer_id), [data.quotes, profile.customer_id]);
+  const quotes = useMemo(() => data.quotes.filter(item => item.customer_id === profile.customer_id && item.status !== 'draft'), [data.quotes, profile.customer_id]);
   const payments = useMemo(() => data.payments.filter(item => item.customer_id === profile.customer_id), [data.payments, profile.customer_id]);
   const openInvoices = invoices.filter(item => !['paid', 'void', 'cancelled'].includes(item.status));
   const outstanding = openInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const paid = payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const pendingQuotes = quotes.filter(item => ['sent', 'draft', 'pending'].includes(item.status));
+  const pendingQuotes = quotes.filter(item => ['sent', 'pending'].includes(item.status));
   const rows = tab === 'invoices' ? invoices : tab === 'quotes' ? quotes : payments;
+
+  async function respondToQuote(quoteId, decision) {
+    setDecisionId(quoteId);
+    setMessage('');
+    const { error } = await supabase.rpc('customer_respond_to_quote', { p_quote_id: quoteId, p_decision: decision });
+    setDecisionId(null);
+    if (error) return setMessage(error.message);
+    setMessage(decision === 'accepted' ? 'Quote accepted. Your service team has been notified.' : 'Quote declined. Your service team can now follow up with you.');
+    await reload?.();
+  }
 
   return <div className="page cfPage">
     <div className="pageHeader">
       <div><p className="eyebrow">Customer portal</p><h1>Billing & documents</h1><p>Review service quotes, invoices, payment history, and items that need attention.</p></div>
     </div>
+
+    {message && <div className="notice">{message}</div>}
 
     <section className="cfHero">
       <div><span>Current balance</span><strong>{money(outstanding)}</strong><small>{openInvoices.length} open invoice{openInvoices.length === 1 ? '' : 's'}</small></div>
@@ -57,6 +72,7 @@ export function CustomerFinance({ profile, data }) {
       <div className="cfRows">
         {rows.map(item => {
           const isPayment = tab === 'payments';
+          const isActionableQuote = tab === 'quotes' && ['sent', 'pending'].includes(item.status);
           const number = isPayment ? `Payment ${item.payment_date || ''}` : tab === 'quotes' ? item.quote_number || 'Quote' : item.invoice_number || 'Invoice';
           const subtitle = isPayment ? `${dateLabel(item.payment_date)} · ${item.method || 'Payment'}` : tab === 'quotes' ? `Valid until ${dateLabel(item.valid_until)}` : `Due ${dateLabel(item.due_date)}`;
           return <article className="cfRow" key={item.id}>
@@ -71,6 +87,12 @@ export function CustomerFinance({ profile, data }) {
               <div><span>Description</span><strong>{item.title || item.notes || (isPayment ? 'Payment received' : 'Cleaning services')}</strong></div>
               {!isPayment && <div><span>Document amount</span><strong>{money(item.amount)}</strong></div>}
               <p>{item.notes || (isPayment ? 'This payment has been recorded on your account.' : 'Contact your service manager with any questions about this document.')}</p>
+              {isActionableQuote && <div className="cfQuoteActions">
+                <button className="decline" disabled={decisionId === item.id} onClick={() => respondToQuote(item.id, 'rejected')}><X size={17}/> Decline</button>
+                <button className="accept" disabled={decisionId === item.id} onClick={() => respondToQuote(item.id, 'accepted')}><Check size={17}/> {decisionId === item.id ? 'Saving...' : 'Accept quote'}</button>
+              </div>}
+              {tab === 'quotes' && item.status === 'accepted' && <div className="cfDecision accepted"><CheckCircle2 size={17}/> Accepted — your service team can proceed.</div>}
+              {tab === 'quotes' && item.status === 'rejected' && <div className="cfDecision rejected"><X size={17}/> Declined — contact your service manager to revise it.</div>}
             </div>}
           </article>;
         })}
