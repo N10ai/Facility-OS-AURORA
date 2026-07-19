@@ -1,7 +1,7 @@
 {
-  "name": "facilityos-v3-21-customer-finance-center",
+  "name": "facilityos-v3-22-customer-quote-decisions",
   "private": true,
-  "version": "3.21.0",
+  "version": "3.22.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/integrate-v3.21.mjs && vite --host 0.0.0.0 --port 3000",
