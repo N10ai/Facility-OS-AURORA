@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/aurora-v3.13-customer-schedule
+  workflow_dispatch:
 
 permissions:
   contents: write
