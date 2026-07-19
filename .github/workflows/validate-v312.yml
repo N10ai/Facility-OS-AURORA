@@ -1,12 +1,9 @@
-name: Validate Aurora v3.12
+name: Integrate Aurora v3.13
 
 on:
   push:
     branches:
-      - agent/aurora-v3.12-contractors
-  pull_request:
-    branches:
-      - main
+      - agent/aurora-v3.13-customer-schedule
   workflow_dispatch:
 
 permissions:
@@ -14,18 +11,19 @@ permissions:
 
 jobs:
   integrate-and-build:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/aurora-v3.12-contractors
+          ref: agent/aurora-v3.13-customer-schedule
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Apply contractor integration
-        run: node scripts/apply-v312-contractors.mjs
+      - name: Apply customer schedule integration
+        run: node scripts/integrate-v3.13.mjs
       - name: Install dependencies
         run: |
           rm -f package-lock.json
@@ -40,7 +38,7 @@ jobs:
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/app/App.jsx src/services/api.js package.json
-            git commit -m "Integrate Aurora v3.12 contractor workspace"
-            git push origin HEAD:agent/aurora-v3.12-contractors
+            git add src/app/App.jsx package.json package-lock.json
+            git commit -m "release: integrate Aurora v3.13.0"
+            git push origin HEAD:agent/aurora-v3.13-customer-schedule
           fi
