@@ -5,7 +5,8 @@ import {
   LogOut, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, UsersRound, Wrench, X,
   ArrowRight, BarChart3, MapPin, TrendingUp, Boxes, ListFilter, CalendarRange,
   DollarSign, Receipt, CreditCard, WalletCards, Banknote, Download,
-  Mail, Phone, MapPinned, History, ContactRound, BriefcaseBusiness, UserPlus, Building, Activity
+  Mail, Phone, MapPinned, History, ContactRound, BriefcaseBusiness, UserPlus, Building, Activity,
+  ClipboardList, Images, ScanSearch, ThumbsUp
 } from 'lucide-react';
 import { configured, supabase } from '../services/supabase';
 import { OperationsCalendar } from './components/OperationsCalendar';
@@ -20,7 +21,8 @@ import {
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
   saveMyProfile, seedMIP, toggleTask, updateVisit, uploadProof, createSupplyItem, upsertFacilityInventory, adjustFacilityInventory, deleteRecord, updateRecord, archiveRecord,
   createCustomerContact, updateCustomerContact, archiveCustomerContact, checkInfrastructure,
-  createQuote, createInvoice, createPayment, createExpense, createPayrollEntry
+  createQuote, createInvoice, createPayment, createExpense, createPayrollEntry,
+  completeInspection, createInspection, updateInspectionArea, updateInspectionItem, uploadInspectionPhoto
 } from '../services/api';
 
 const empty = {
