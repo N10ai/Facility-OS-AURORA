@@ -1,12 +1,12 @@
 {
-  "name": "facilityos-v3-13-customer-schedule",
+  "name": "facilityos-v3-14-customer-billing",
   "private": true,
-  "version": "3.13.0",
+  "version": "3.14.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
     "dev:strict": "vite --host 0.0.0.0 --port 3000 --strictPort",
-    "prebuild": "node scripts/integrate-v3.13.mjs",
+    "prebuild": "node scripts/integrate-v3.14.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "start": "npm run dev:strict",
