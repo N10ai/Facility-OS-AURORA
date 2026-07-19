@@ -1,5 +1,8 @@
 import fs from 'node:fs';
 
+const productionFinanceMigration =
+  'supabase/migrations/20260719225114_secure_finance_rls_foundation.sql';
+
 const requiredFiles = [
   'package.json',
   'package-lock.json',
@@ -7,6 +10,7 @@ const requiredFiles = [
   'vite.config.js',
   'src/app/App.jsx',
   'src/main.jsx',
+  productionFinanceMigration,
 ];
 
 const requiredScripts = [
@@ -42,6 +46,34 @@ if (fs.existsSync('src/app/App.jsx')) {
   ];
   for (const marker of expectedMarkers) {
     if (!appSource.includes(marker)) failures.push(`App integration marker missing: ${marker}`);
+  }
+}
+
+if (fs.existsSync(productionFinanceMigration)) {
+  const migrationSource = fs.readFileSync(productionFinanceMigration, 'utf8');
+  const securityMarkers = [
+    'app_private.current_profile_company_id',
+    'customers view own invoices',
+    'customers view own payments',
+    'owners and admins view payroll',
+  ];
+
+  for (const marker of securityMarkers) {
+    if (!migrationSource.includes(marker)) {
+      failures.push(`Finance security migration marker missing: ${marker}`);
+    }
+  }
+
+  const forbiddenPatterns = [
+    /create\s+policy[\s\S]{0,180}using\s*\(\s*true\s*\)/i,
+    /create\s+policy[\s\S]{0,180}with\s+check\s*\(\s*true\s*\)/i,
+  ];
+
+  for (const pattern of forbiddenPatterns) {
+    if (pattern.test(migrationSource)) {
+      failures.push('Finance security migration contains an unrestricted RLS policy.');
+      break;
+    }
   }
 }
 
