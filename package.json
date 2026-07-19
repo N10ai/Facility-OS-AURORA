@@ -1,7 +1,7 @@
 {
-  "name": "facilityos-v3-19-persistent-portal-preview",
+  "name": "facilityos-v3-20-employee-execution-workspace",
   "private": true,
-  "version": "3.19.0",
+  "version": "3.20.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
