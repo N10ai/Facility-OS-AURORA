@@ -18,9 +18,14 @@ source = source.replace(
 if (!source.includes("page==='customer-finance'")) {
   source = source.replace(
     "if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;",
-    "if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;\n    else if(page==='customer-finance') content=<CustomerFinance profile={profile} data={data}/>;",
+    "if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;\n    else if(page==='customer-finance') content=<CustomerFinance profile={profile} data={data} reload={reload}/>;",
   );
 }
 
+source = source.replace(
+  "content=<CustomerFinance profile={profile} data={data}/>;",
+  "content=<CustomerFinance profile={profile} data={data} reload={reload}/>;",
+);
+
 fs.writeFileSync(path, source);
-console.log('Aurora v3.21 customer finance integration applied.');
+console.log('Aurora v3.22 customer quote decisions integration applied.');
