@@ -2,6 +2,8 @@ import fs from 'node:fs';
 
 const productionFinanceMigration =
   'supabase/migrations/20260719225114_secure_finance_rls_foundation.sql';
+const productionOperationsMigration =
+  'supabase/migrations/20260719231109_secure_operations_rls_foundation.sql';
 
 const requiredFiles = [
   'package.json',
@@ -11,6 +13,7 @@ const requiredFiles = [
   'src/app/App.jsx',
   'src/main.jsx',
   productionFinanceMigration,
+  productionOperationsMigration,
 ];
 
 const requiredScripts = [
@@ -49,18 +52,13 @@ if (fs.existsSync('src/app/App.jsx')) {
   }
 }
 
-if (fs.existsSync(productionFinanceMigration)) {
-  const migrationSource = fs.readFileSync(productionFinanceMigration, 'utf8');
-  const securityMarkers = [
-    'app_private.current_profile_company_id',
-    'customers view own invoices',
-    'customers view own payments',
-    'owners and admins view payroll',
-  ];
+function auditSecurityMigration(file, label, markers) {
+  if (!fs.existsSync(file)) return;
 
-  for (const marker of securityMarkers) {
+  const migrationSource = fs.readFileSync(file, 'utf8');
+  for (const marker of markers) {
     if (!migrationSource.includes(marker)) {
-      failures.push(`Finance security migration marker missing: ${marker}`);
+      failures.push(`${label} security migration marker missing: ${marker}`);
     }
   }
 
@@ -71,11 +69,27 @@ if (fs.existsSync(productionFinanceMigration)) {
 
   for (const pattern of forbiddenPatterns) {
     if (pattern.test(migrationSource)) {
-      failures.push('Finance security migration contains an unrestricted RLS policy.');
+      failures.push(`${label} security migration contains an unrestricted RLS policy.`);
       break;
     }
   }
 }
+
+auditSecurityMigration(productionFinanceMigration, 'Finance', [
+  'app_private.current_profile_company_id',
+  'customers view own invoices',
+  'customers view own payments',
+  'owners and admins view payroll',
+]);
+
+auditSecurityMigration(productionOperationsMigration, 'Operations', [
+  'app_private.can_access_work_order',
+  'app_private.can_access_service_visit',
+  'operations view accessible work orders',
+  'operations view accessible service visits',
+  'customers create own requests',
+  'operations view inspections',
+]);
 
 if (failures.length) {
   for (const failure of failures) console.error(`ERROR: ${failure}`);
