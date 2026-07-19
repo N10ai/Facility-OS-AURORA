@@ -29,7 +29,7 @@ import {
 
 const empty = {
   customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
-  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[], quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[], contractors:[], contractors:[], contractors:[]
+  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[], quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[], contractors:[], contractors:[], contractors:[], contractors:[]
 };
 
 function Modal({open,title,onClose,children}) {
