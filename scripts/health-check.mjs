@@ -1,32 +1,53 @@
-import net from 'node:net';
 import fs from 'node:fs';
 
-const required = ['package.json', 'index.html', 'vite.config.js', 'src/app/App.jsx'];
-let failed = false;
+const requiredFiles = [
+  'package.json',
+  'package-lock.json',
+  'index.html',
+  'vite.config.js',
+  'src/app/App.jsx',
+  'src/main.jsx',
+];
 
-for (const file of required) {
-  if (!fs.existsSync(file)) {
-    console.error(`Missing required file: ${file}`);
-    failed = true;
+const requiredScripts = [
+  'scripts/integrate-v3.18.mjs',
+  'scripts/integrate-v3.21.mjs',
+  'scripts/integrate-v3.23.mjs',
+];
+
+const failures = [];
+
+for (const file of [...requiredFiles, ...requiredScripts]) {
+  if (!fs.existsSync(file)) failures.push(`Missing required file: ${file}`);
+}
+
+if (fs.existsSync('package.json')) {
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  for (const script of ['dev', 'build', 'prebuild', 'health']) {
+    if (!packageJson.scripts?.[script]) failures.push(`Missing npm script: ${script}`);
+  }
+
+  const prebuild = packageJson.scripts?.prebuild ?? '';
+  for (const script of requiredScripts) {
+    if (!prebuild.includes(script)) failures.push(`Prebuild does not include ${script}`);
   }
 }
 
-await new Promise((resolve) => {
-  const socket = net.createConnection({ host: '127.0.0.1', port: 3000 });
-  socket.on('connect', () => {
-    console.log('FacilityOS server: READY on port 3000');
-    socket.end();
-    resolve();
-  });
-  socket.on('error', () => {
-    console.error('FacilityOS server: NOT RUNNING on port 3000');
-    failed = true;
-    resolve();
-  });
-  setTimeout(() => {
-    socket.destroy();
-    resolve();
-  }, 1000);
-});
+if (fs.existsSync('src/app/App.jsx')) {
+  const appSource = fs.readFileSync('src/app/App.jsx', 'utf8');
+  const expectedMarkers = [
+    'AdminRequestsWorkspace',
+    'CustomerFinance',
+    'EmployeeWorkspace',
+  ];
+  for (const marker of expectedMarkers) {
+    if (!appSource.includes(marker)) failures.push(`App integration marker missing: ${marker}`);
+  }
+}
 
-process.exit(failed ? 1 : 0);
+if (failures.length) {
+  for (const failure of failures) console.error(`ERROR: ${failure}`);
+  process.exit(1);
+}
+
+console.log('Facility OS repository health audit passed.');
