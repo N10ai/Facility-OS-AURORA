@@ -16,6 +16,7 @@ import { PhotoLightbox } from './components/PhotoLightbox';
 import { CustomerInventory } from './components/CustomerInventory';
 import { CustomerReportGallery } from './components/CustomerReportGallery';
 import { EmployeeWorkspace } from './components/EmployeeWorkspace';
+import { ReportsWorkspace } from './components/ReportsWorkspace';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
@@ -1304,7 +1305,7 @@ export function App() {
     else if(page==='expenses') content=<ExpensesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='billing') content=<FinanceSummary data={data} setPage={setPage}/>;
     else if(page==='contractors') content=<ModulePlaceholder title="Contractors" description="Manage outsourced cleaners, plumbers, electricians, and other service partners."/>;
-    else if(page==='reports') content=<ModulePlaceholder title="Reports" description="Operations, proof-of-service, customer, financial, and employee performance reports."/>;
+    else if(page==='reports') content=<ReportsWorkspace data={data}/>;
     else content=<ModernSettingsPage/>;
   } else if(portal==='employee') {
     content=<EmployeeWorkspace profile={profile} data={data} reload={reload}/>;
