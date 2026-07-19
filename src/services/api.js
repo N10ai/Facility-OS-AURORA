@@ -47,7 +47,7 @@ export async function loadWorkspace(profile) {
     customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
     tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[],
     workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[],
-    quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[]
+    quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[], contractors:[]
   };
 
   const companyId = profile.company_id;
@@ -55,7 +55,7 @@ export async function loadWorkspace(profile) {
   const [
     customers, contacts, facilities, people, plans, visits, tasks, proof, issues,
     requests, supplies, inventory, invites, workOrders, workOrderAreas, supplyUsage, timeEntries,
-    quotes, invoices, payments, expenses, payroll, inspections, inspectionAreas, inspectionItems, inspectionPhotos
+    quotes, invoices, payments, expenses, payroll, inspections, inspectionAreas, inspectionItems, inspectionPhotos, contractors
   ] = await Promise.all([
     supabase.from('customers').select('*').eq('company_id',companyId).neq('status','archived').order('name'),
     supabase.from('customer_contacts').select('*').eq('company_id',companyId).neq('status','archived').order('full_name'),
@@ -82,7 +82,8 @@ export async function loadWorkspace(profile) {
     supabase.from('inspections').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
     supabase.from('inspection_areas').select('*').eq('company_id',companyId).order('sort_order'),
     supabase.from('inspection_items').select('*').eq('company_id',companyId).order('sort_order'),
-    supabase.from('inspection_photos').select('*').eq('company_id',companyId).order('created_at',{ascending:false})
+    supabase.from('inspection_photos').select('*').eq('company_id',companyId).order('created_at',{ascending:false}),
+    supabase.from('contractors').select('*').eq('company_id',companyId).neq('status','archived').order('business_name')
   ]);
 
   return {
@@ -93,7 +94,7 @@ export async function loadWorkspace(profile) {
     invites:invites.data||[], workOrders:workOrders.data||[], workOrderAreas:workOrderAreas.data||[],
     supplyUsage:supplyUsage.data||[], timeEntries:timeEntries.data||[],
     quotes:quotes.data||[], invoices:invoices.data||[], payments:payments.data||[],
-    expenses:expenses.data||[], payroll:payroll.data||[], inspections:inspections.data||[], inspectionAreas:inspectionAreas.data||[], inspectionItems:inspectionItems.data||[], inspectionPhotos:inspectionPhotos.data||[]
+    expenses:expenses.data||[], payroll:payroll.data||[], inspections:inspections.data||[], inspectionAreas:inspectionAreas.data||[], inspectionItems:inspectionItems.data||[], inspectionPhotos:inspectionPhotos.data||[], contractors:contractors.data||[]
   };
 }
 

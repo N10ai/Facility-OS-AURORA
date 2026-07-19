@@ -17,6 +17,7 @@ import { CustomerInventory } from './components/CustomerInventory';
 import { CustomerReportGallery } from './components/CustomerReportGallery';
 import { EmployeeWorkspace } from './components/EmployeeWorkspace';
 import { ReportsWorkspace } from './components/ReportsWorkspace';
+import { ContractorsWorkspace } from './components/ContractorsWorkspace';
 import {
   createCompany, createCustomer, createCustomerRequest, createFacility, createIssue,
   createPortalInvite, revokePortalInvite, getPortalInvitePreview, claimPortalInvite, createServicePlan, createWorkOrder, updateWorkOrder, archiveWorkOrder, updateWorkOrderArea, startWorkOrder, finishWorkOrder, verifyWorkOrder, returnWorkOrder, recordSupplyUsage, generateVisits, getMyProfile, loadWorkspace,
@@ -28,7 +29,7 @@ import {
 
 const empty = {
   customers:[], contacts:[], facilities:[], people:[], plans:[], visits:[],
-  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[], quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[]
+  tasks:[], proof:[], issues:[], requests:[], supplies:[], inventory:[], invites:[], workOrders:[], workOrderAreas:[], supplyUsage:[], timeEntries:[], quotes:[], invoices:[], payments:[], expenses:[], payroll:[], inspections:[], inspectionAreas:[], inspectionItems:[], inspectionPhotos:[], contractors:[]
 };
 
 function Modal({open,title,onClose,children}) {
@@ -1304,7 +1305,7 @@ export function App() {
     else if(page==='payroll') content=<PayrollPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='expenses') content=<ExpensesPage data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='billing') content=<FinanceSummary data={data} setPage={setPage}/>;
-    else if(page==='contractors') content=<ModulePlaceholder title="Contractors" description="Manage outsourced cleaners, plumbers, electricians, and other service partners."/>;
+    else if(page==='contractors') content=<ContractorsWorkspace data={data} companyId={profile.company_id} reload={reload}/>;
     else if(page==='reports') content=<ReportsWorkspace data={data}/>;
     else content=<ModernSettingsPage/>;
   } else if(portal==='employee') {

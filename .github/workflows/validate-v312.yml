@@ -1,0 +1,46 @@
+name: Validate Aurora v3.12
+
+on:
+  push:
+    branches:
+      - agent/aurora-v3.12-contractors
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/aurora-v3.12-contractors
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply contractor integration
+        run: node scripts/apply-v312-contractors.mjs
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm config set registry https://registry.npmjs.org/
+          npm install --no-audit --no-fund --progress=false
+      - name: Production build
+        run: npm run build
+      - name: Commit integrated application
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/app/App.jsx src/services/api.js package.json
+            git commit -m "Integrate Aurora v3.12 contractor workspace"
+            git push origin HEAD:agent/aurora-v3.12-contractors
+          fi
