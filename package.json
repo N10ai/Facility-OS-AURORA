@@ -1,7 +1,7 @@
 {
-  "name": "facilityos-v3-12-contractors",
+  "name": "facilityos-v3-13-customer-schedule",
   "private": true,
-  "version": "3.12.0",
+  "version": "3.13.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
