@@ -1,37 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  AlertTriangle,
-  ClipboardList,
-  Images,
-  ScanSearch,
-  ThumbsUp,
-} from 'lucide-react';
-import {
-  completeInspection,
-  createInspection,
-  updateInspectionArea,
-  updateInspectionItem,
-  uploadInspectionPhoto,
-} from '../services/api';
+import { AlertTriangle } from 'lucide-react';
 import { App } from './App';
 import '../styles/app.css';
-
-// v3.7 generated the inspection workspace without adding its runtime imports
-// to App.jsx. Expose the dependencies as global bindings so the existing
-// inspection module can render while App.jsx is split into smaller modules.
-Object.assign(globalThis, {
-  AlertTriangle,
-  ClipboardList,
-  Images,
-  ScanSearch,
-  ThumbsUp,
-  completeInspection,
-  createInspection,
-  updateInspectionArea,
-  updateInspectionItem,
-  uploadInspectionPhoto,
-});
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {

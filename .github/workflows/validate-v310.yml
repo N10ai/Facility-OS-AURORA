@@ -1,0 +1,49 @@
+name: Validate Aurora v3.10
+
+on:
+  push:
+    branches:
+      - agent/aurora-v3.10-inspection-modules
+    paths:
+      - scripts/apply-v310-inspection-modules.mjs
+      - .github/workflows/validate-v310.yml
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/aurora-v3.10-inspection-modules
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply inspection module stabilization
+        run: node scripts/apply-v310-inspection-modules.mjs
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm config set registry https://registry.npmjs.org/
+          npm install --no-audit --no-fund --progress=false
+      - name: Production build
+        run: npm run build
+      - name: Commit integrated release
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/app/App.jsx src/app/main.jsx package.json docs/V3_10_SCOPE.md docs/V3_10_TEST_PLAN.md
+            git commit -m "Release Aurora v3.10.0"
+            git push origin HEAD:agent/aurora-v3.10-inspection-modules
+          fi
