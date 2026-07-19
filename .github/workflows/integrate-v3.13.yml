@@ -1,0 +1,35 @@
+name: Integrate Aurora v3.13
+
+on:
+  push:
+    branches:
+      - agent/aurora-v3.13-customer-schedule
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/aurora-v3.13-customer-schedule
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: node scripts/integrate-v3.13.mjs
+      - run: npm ci
+      - run: npm run build
+      - name: Commit integrated release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/App.jsx package.json package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "release: integrate Aurora v3.13.0"
+          git push

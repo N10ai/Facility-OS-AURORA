@@ -15,6 +15,7 @@ import { SettingsHub } from './components/SettingsHub';
 import { PhotoLightbox } from './components/PhotoLightbox';
 import { CustomerInventory } from './components/CustomerInventory';
 import { CustomerReportGallery } from './components/CustomerReportGallery';
+import { CustomerSchedule } from './components/CustomerSchedule';
 import { EmployeeWorkspace } from './components/EmployeeWorkspace';
 import { ReportsWorkspace } from './components/ReportsWorkspace';
 import { ContractorsWorkspace } from './components/ContractorsWorkspace';
@@ -1311,7 +1312,8 @@ export function App() {
   } else if(portal==='employee') {
     content=<EmployeeWorkspace profile={profile} data={data} reload={reload}/>;
   } else {
-    if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;
+    if(page==='customer-schedule') content=<CustomerSchedule profile={profile} data={data}/>;
+    else if(page==='customer-proof') content=<CustomerReportGallery profile={profile} data={data}/>;
     else if(page==='customer-inventory') content=<CustomerInventory profile={profile} data={data}/>;
     else if(page==='customer-requests') content=<CustomerRequests profile={profile} data={data} reload={reload}/>;
     else content=<CustomerHome profile={profile} data={data}/>;
