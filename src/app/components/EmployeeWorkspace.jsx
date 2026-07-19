@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock, PackageOpen } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, KeyRound, MapPin, Navigation, PackageOpen, ShieldCheck } from 'lucide-react';
 import {
   finishWorkOrder,
   recordSupplyUsage,
@@ -54,6 +54,8 @@ export function EmployeeWorkspace({ profile, data, reload }) {
   const historyMine = mine
     .filter(order => order.status === 'verified' || order.scheduled_date < today)
     .sort((a, b) => (b.scheduled_date || '').localeCompare(a.scheduled_date || ''));
+  const activeCount = mine.filter(order => ['in_progress', 'returned'].includes(order.status)).length;
+  const awaitingCount = mine.filter(order => order.status === 'awaiting_verification').length;
 
   async function start(order) {
     const { error } = await startWorkOrder(order.id, profile.company_id, profile.id);
@@ -108,6 +110,8 @@ export function EmployeeWorkspace({ profile, data, reload }) {
     const facility = data.facilities.find(item => item.id === current.facility_id);
     const inventory = data.inventory.filter(item => item.facility_id === current.facility_id);
     const completed = areas.filter(item => item.status === 'completed').length;
+    const readyToSubmit = areas.length === 0 || completed === areas.length;
+    const mapsUrl = facility?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facility.address)}` : '';
 
     return <div className="page ewMissionPage">
       <button className="back" onClick={() => setSelected(null)}><ArrowLeft size={18}/> My work</button>
@@ -115,7 +119,17 @@ export function EmployeeWorkspace({ profile, data, reload }) {
         <div><p className="eyebrow">Today's mission</p><h1>{current.title}</h1><p>{facility?.name || 'Facility'} · {current.scheduled_time || 'Any time'}</p></div>
         <div className={`status ${current.status}`}>{String(current.status).replaceAll('_', ' ')}</div>
       </section>
-      <section className="ewInfoStrip"><Clock size={19}/><div><strong>{current.estimated_minutes || 90} minutes</strong><span>{current.instructions || facility?.access_notes || 'Follow the assigned area checklist.'}</span></div></section>
+
+      <section className="ewSiteBriefing">
+        <div className="ewBriefingTitle"><div className="ewBriefingIcon"><MapPin size={20}/></div><div><p className="eyebrow">Before you enter</p><h2>Site briefing</h2></div></div>
+        <div className="ewBriefingGrid">
+          <div><MapPin size={18}/><span><small>Address</small><strong>{facility?.address || 'No address added'}</strong></span></div>
+          <div><KeyRound size={18}/><span><small>Access instructions</small><strong>{facility?.access_notes || current.instructions || 'No special access notes'}</strong></span></div>
+        </div>
+        {mapsUrl && <a className="ewDirections" href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={17}/> Open directions</a>}
+      </section>
+
+      <section className="ewInfoStrip"><Clock size={19}/><div><strong>{current.estimated_minutes || 90} minutes planned</strong><span>{current.instructions || 'Follow each assigned area and complete the final readiness check.'}</span></div></section>
       {['scheduled', 'returned'].includes(current.status) && <ActionButton onClick={() => start(current)}>{current.status === 'returned' ? 'Resume corrections' : 'Start mission'}</ActionButton>}
       {current.manager_note && <div className="ewCorrection"><strong>Manager correction</strong><p>{current.manager_note}</p></div>}
 
@@ -139,15 +153,25 @@ export function EmployeeWorkspace({ profile, data, reload }) {
         </div>
       </section>
 
-      <ActionButton onClick={() => finish(current)}><CheckCircle2 size={18}/> Submit mission</ActionButton>
+      <section className={readyToSubmit ? 'ewReadiness ready' : 'ewReadiness'}>
+        <ShieldCheck size={22}/>
+        <div><strong>{readyToSubmit ? 'Mission ready to submit' : 'Final check incomplete'}</strong><span>{readyToSubmit ? 'All assigned areas are marked complete.' : `${areas.length - completed} area${areas.length - completed === 1 ? '' : 's'} still need completion.`}</span></div>
+      </section>
+      <ActionButton disabled={!readyToSubmit || current.status === 'awaiting_verification' || current.status === 'verified'} onClick={() => finish(current)}><CheckCircle2 size={18}/> {current.status === 'awaiting_verification' ? 'Awaiting manager verification' : 'Submit mission'}</ActionButton>
       {message && <div className="notice">{message}</div>}
     </div>;
   }
 
   return <div className="page ewWorkspace">
     <div className="pageHeader">
-      <div><p className="eyebrow">Employee workspace</p><h1>My work</h1><p>See today's missions, upcoming assignments, and verified history.</p></div>
+      <div><p className="eyebrow">Employee workspace</p><h1>Good day, {profile.full_name?.split(' ')[0] || 'team member'}.</h1><p>Everything needed for today's cleaning route is in one place.</p></div>
       <div className="ewTodayBadge"><strong>{todayMine.length}</strong><span>today</span></div>
+    </div>
+
+    <div className="ewShiftSummary">
+      <div><Clock size={19}/><span><strong>{activeCount}</strong><small>Active now</small></span></div>
+      <div><ShieldCheck size={19}/><span><strong>{awaitingCount}</strong><small>Awaiting review</small></span></div>
+      <div><CheckCircle2 size={19}/><span><strong>{historyMine.length}</strong><small>Completed</small></span></div>
     </div>
 
     <section className="ewTodaySection">
