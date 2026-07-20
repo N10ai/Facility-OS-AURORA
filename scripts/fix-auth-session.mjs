@@ -4,45 +4,42 @@ const path = 'src/app/App.jsx';
 let source = fs.readFileSync(path, 'utf8');
 let changes = 0;
 
-function replaceOnce(before, after, label) {
-  if (source.includes(after)) {
-    console.log(`${label} already applied.`);
-    return;
-  }
-  if (!source.includes(before)) {
+function replaceRegex(pattern, replacement, label) {
+  if (!pattern.test(source)) {
     throw new Error(`Could not find ${label} target in ${path}.`);
   }
-  source = source.replace(before, after);
+  source = source.replace(pattern, replacement);
   changes += 1;
   console.log(`Applied ${label}.`);
 }
 
-replaceOnce(
-`    } catch(error) {
-       console.error('FacilityOS bootstrap error:',error);
-       setSession(null); setProfile(null); setData(empty);
-     } finally {`,
-`    } catch(error) {
-       console.error('FacilityOS bootstrap error:',error);
-       // A profile or workspace request failure must not invalidate a successful login.
-       // Keep the current session/profile state and allow the UI to leave the loading screen.
-       setData(empty);
-     } finally {`,
-'mobile session-preservation patch'
+// A profile/workspace timeout is not a logout. Never clear a valid login here.
+replaceRegex(
+  /}\s*catch\(error\)\s*{\s*console\.error\('FacilityOS bootstrap error:',error\);\s*setSession\(null\);\s*setProfile\(null\);\s*setData\(empty\);\s*}\s*finally\s*{/,
+  `} catch(error) {
+      console.error('FacilityOS bootstrap error:',error);
+      setData(empty);
+    } finally {`,
+  'session preservation'
 );
 
-replaceOnce(
-`  useEffect(()=>{bootstrap(); if(supabase){const {data:l}=supabase.auth.onAuthStateChange(()=>bootstrap());return()=>l.subscription.unsubscribe();}},[]);`,
-`  useEffect(()=>{
+// Run startup once. Auth events update session state but must not recursively call
+// bootstrap/getSession while Supabase is processing its own auth callback.
+replaceRegex(
+  /useEffect\(\(\)=>\{bootstrap\(\);\s*if\(supabase\)\{const \{data:l\}=supabase\.auth\.onAuthStateChange\(\(\)=>bootstrap\(\)\);return\(\)=>l\.subscription\.unsubscribe\(\);}\},\[\]\);/,
+  `useEffect(()=>{
     let active=true;
-    const loadingEscape=window.setTimeout(()=>{if(active)setLoading(false)},12000);
+    const loadingEscape=window.setTimeout(()=>{if(active)setLoading(false)},8000);
     bootstrap();
     if(!supabase) return()=>{active=false;window.clearTimeout(loadingEscape)};
-    const {data:l}=supabase.auth.onAuthStateChange((_event,nextSession)=>{
-      if(nextSession) setSession(nextSession);
-      // Supabase warns against awaiting another auth method inside this callback.
-      // Defer bootstrap until the auth callback has released its internal lock.
-      window.setTimeout(()=>{if(active)bootstrap()},0);
+    const {data:l}=supabase.auth.onAuthStateChange((event,nextSession)=>{
+      if(!active) return;
+      setSession(nextSession||null);
+      if(event==='SIGNED_OUT') {
+        setProfile(null);
+        setData(empty);
+        setLoading(false);
+      }
     });
     return()=>{
       active=false;
@@ -50,14 +47,11 @@ replaceOnce(
       l.subscription.unsubscribe();
     };
   },[]);`,
-'mobile auth-listener deadlock patch'
+  'non-recursive auth listener'
 );
 
-replaceOnce(
-`    onReady?.();`,
-`    window.setTimeout(()=>onReady?.(),0);`,
-'post-login bootstrap deferral patch'
-);
+// Login already returns a session; defer one normal startup refresh outside the click stack.
+source = source.replace(/\s+onReady\?\.\(\);/, `\n    window.setTimeout(()=>onReady?.(),0);`);
 
 fs.writeFileSync(path, source);
-console.log(`Auth startup patch complete (${changes} change${changes===1?'':'s'}).`);
+console.log(`Auth startup patch complete (${changes} critical changes).`);
