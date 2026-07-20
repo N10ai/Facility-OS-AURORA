@@ -1,12 +1,11 @@
 {
-  "name": "facilityos-v3-24-1-pages-redeploy",
+  "name": "facilityos-aurora",
   "private": true,
-  "version": "3.24.1",
+  "version": "3.26.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/integrate-v3.21.mjs && node scripts/integrate-v3.23.mjs && node scripts/integrate-v3.24.mjs && vite --host 0.0.0.0 --port 3000",
-    "dev:strict": "node scripts/integrate-v3.21.mjs && node scripts/integrate-v3.23.mjs && node scripts/integrate-v3.24.mjs && vite --host 0.0.0.0 --port 3000 --strictPort",
-    "prebuild": "node scripts/integrate-v3.18.mjs && node scripts/integrate-v3.21.mjs && node scripts/integrate-v3.23.mjs && node scripts/integrate-v3.24.mjs",
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev:strict": "vite --host 0.0.0.0 --port 3000 --strictPort",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "start": "npm run dev:strict",
