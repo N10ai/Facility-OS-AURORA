@@ -1,11 +1,12 @@
 {
   "name": "facilityos-aurora",
   "private": true,
-  "version": "3.26.0",
+  "version": "3.26.1",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 3000",
-    "dev:strict": "vite --host 0.0.0.0 --port 3000 --strictPort",
+    "dev": "node scripts/fix-auth-session.mjs && vite --host 0.0.0.0 --port 3000",
+    "dev:strict": "node scripts/fix-auth-session.mjs && vite --host 0.0.0.0 --port 3000 --strictPort",
+    "prebuild": "node scripts/fix-auth-session.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "start": "npm run dev:strict",
