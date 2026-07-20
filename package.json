@@ -4,8 +4,11 @@
   "version": "3.10.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/connectReports.mjs",
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "predev:strict": "node scripts/connectReports.mjs",
     "dev:strict": "vite --host 0.0.0.0 --port 3000 --strictPort",
+    "prebuild": "node scripts/connectReports.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "start": "npm run dev:strict",
