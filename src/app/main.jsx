@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AlertTriangle } from 'lucide-react';
 import { App } from './App';
+import { CommunicationLauncher } from './components/CommunicationLauncher';
 import '../styles/app.css';
 
 class AppErrorBoundary extends React.Component {
@@ -42,6 +43,7 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <App />
+      <CommunicationLauncher />
     </AppErrorBoundary>
   </React.StrictMode>,
 );
