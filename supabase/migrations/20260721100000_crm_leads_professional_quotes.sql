@@ -20,10 +20,10 @@ create table if not exists public.leads (
 );
 create index if not exists leads_company_stage_idx on public.leads(company_id,stage,created_at desc);
 alter table public.leads enable row level security;
-drop policy if exists "staff manage company leads" on public.leads;
-create policy "staff manage company leads" on public.leads for all
-using (company_id = app_private.current_profile_company_id() and app_private.current_profile_role() = any(array['owner','admin','manager','sales_rep','account_manager']))
-with check (company_id = app_private.current_profile_company_id() and app_private.current_profile_role() = any(array['owner','admin','manager','sales_rep','account_manager']));
+drop policy if exists "leads company access" on public.leads;
+create policy "leads company access" on public.leads for all
+using (company_id = (select company_id from public.profiles where id = auth.uid()))
+with check (company_id = (select company_id from public.profiles where id = auth.uid()));
 grant select,insert,update,delete on public.leads to authenticated;
 
 alter table public.quotes
@@ -34,4 +34,9 @@ alter table public.quotes
   add column if not exists payment_terms text,
   add column if not exists tax_rate numeric(7,4) not null default 0;
 
+alter table public.quote_line_items enable row level security;
+drop policy if exists "quote line items company access" on public.quote_line_items;
+create policy "quote line items company access" on public.quote_line_items for all
+using (company_id = (select company_id from public.profiles where id = auth.uid()))
+with check (company_id = (select company_id from public.profiles where id = auth.uid()));
 grant select,insert,update,delete on public.quote_line_items to authenticated;
