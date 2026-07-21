@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Calculator } from 'lucide-react';
 import { App } from './App';
+import { PricingEngine } from './components/PricingEngine';
 import '../styles/app.css';
 
 class AppErrorBoundary extends React.Component {
@@ -38,10 +39,25 @@ class AppErrorBoundary extends React.Component {
   }
 }
 
+function AuroraRoot() {
+  const [pricingOpen, setPricingOpen] = useState(new URLSearchParams(window.location.search).get('pricing') === '1');
+
+  return (
+    <>
+      <App />
+      <button className="pricingLauncher" type="button" onClick={() => setPricingOpen(true)}>
+        <Calculator size={18} />
+        <span>Quick price</span>
+      </button>
+      <PricingEngine open={pricingOpen} onClose={() => setPricingOpen(false)} />
+    </>
+  );
+}
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <App />
+      <AuroraRoot />
     </AppErrorBoundary>
   </React.StrictMode>,
 );
