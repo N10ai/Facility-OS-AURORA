@@ -37,6 +37,9 @@ create table if not exists public.pricing_estimates (
 create index if not exists pricing_estimates_company_idx on public.pricing_estimates(company_id, created_at desc);
 create index if not exists pricing_estimates_customer_idx on public.pricing_estimates(customer_id);
 
+grant select, insert, update, delete on table public.pricing_estimates to authenticated;
+revoke all on table public.pricing_estimates from anon;
+
 alter table public.pricing_estimates enable row level security;
 
 drop policy if exists "pricing estimates company access" on public.pricing_estimates;
