@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Building2, CalendarDays, DollarSign, Mail, Phone, Plus, Search, Trash2, UserRound, X } from 'lucide-react';
-import { supabase } from '../../services/supabase';
+import { supabase } from '../services/supabase';
+import { LeadEngagement } from './LeadEngagement';
 
 const stages = ['new','contacted','qualified','proposal','won','lost'];
 const blankLead = { company_name:'', contact_name:'', email:'', phone:'', address:'', industry:'', facility_type:'office', facility_count:1, opportunity_value:'', source:'', next_follow_up:'', notes:'', stage:'new' };
@@ -52,9 +53,14 @@ export function LeadWorkspace({ open, onClose }) {
 
   async function updateLead(fields){
     if(!selected) return;
+    const previousStage=selected.stage;
     const {data,error}=await supabase.from('leads').update(fields).eq('id',selected.id).select().single();
     if(error) return setMessage(error.message);
-    setSelected(data); await loadLeads();
+    setSelected(data);
+    if(fields.stage&&fields.stage!==previousStage&&profile){
+      await supabase.from('lead_activities').insert({company_id:profile.company_id,lead_id:selected.id,created_by:profile.id,activity_type:'status_change',body:`Stage changed from ${stageLabel(previousStage)} to ${stageLabel(fields.stage)}.`});
+    }
+    await loadLeads();
   }
 
   async function removeLead(){
@@ -108,7 +114,7 @@ export function LeadWorkspace({ open, onClose }) {
 
         <main className="leadDetail">
           {creating&&<LeadForm form={form} setForm={setForm} onCancel={()=>setCreating(false)} onSave={saveLead} loading={loading}/>} 
-          {!creating&&selected&&<LeadDetail lead={selected} onBack={()=>setSelected(null)} onUpdate={updateLead} onDelete={removeLead}/>} 
+          {!creating&&selected&&<LeadDetail lead={selected} profile={profile} onBack={()=>setSelected(null)} onUpdate={updateLead} onDelete={removeLead} onMessage={setMessage}/>} 
           {!creating&&!selected&&<div className="leadWelcome"><Building2 size={34}/><h2>Select a lead</h2><p>Open a prospect to review contact information, value, follow-up date, and pipeline stage.</p></div>}
         </main>
       </div>
@@ -137,7 +143,7 @@ function LeadForm({form,setForm,onCancel,onSave,loading}){
   </div>;
 }
 
-function LeadDetail({lead,onBack,onUpdate,onDelete}){
+function LeadDetail({lead,profile,onBack,onUpdate,onDelete,onMessage}){
   return <div className="leadRecord"><div className="leadDetailTitle"><button onClick={onBack}><ArrowLeft size={18}/></button><div><p>Opportunity</p><h2>{lead.company_name}</h2></div><button className="leadDelete" onClick={onDelete}><Trash2 size={17}/></button></div>
     <div className="leadStageBar">{stages.map(stage=><button key={stage} className={lead.stage===stage?'active':''} onClick={()=>onUpdate({stage})}>{stageLabel(stage)}</button>)}</div>
     <div className="leadRecordGrid">
@@ -148,7 +154,8 @@ function LeadDetail({lead,onBack,onUpdate,onDelete}){
       <Info icon={Building2} label="Facilities" value={`${lead.facility_count||1} · ${lead.facility_type||'office'}`}/>
       <Info icon={CalendarDays} label="Next follow-up" value={lead.next_follow_up||'Not scheduled'}/>
     </div>
-    <section className="leadNotes"><div><h3>Notes</h3><span>Update the working context for this opportunity.</span></div><textarea defaultValue={lead.notes||''} onBlur={e=>{if(e.target.value!==lead.notes)onUpdate({notes:e.target.value})}} rows="7"/></section>
+    <section className="leadNotes"><div><h3>Notes</h3><span>Update the working context for this opportunity.</span></div><textarea defaultValue={lead.notes||''} onBlur={e=>{if(e.target.value!==lead.notes)onUpdate({notes:e.target.value})}} rows="5"/></section>
+    {profile&&<LeadEngagement lead={lead} profile={profile} onMessage={onMessage}/>} 
   </div>;
 }
 
