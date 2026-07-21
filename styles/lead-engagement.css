@@ -1,0 +1,23 @@
+.leadEngagementGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
+.leadPanel{border:1px solid #e6eaf0;border-radius:18px;padding:18px;background:#fbfcfe}
+.leadPanelHeading{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.leadPanelHeading h3{margin:0;color:#111827}
+.leadPanelHeading span,.leadMuted{color:#64748b;font-size:13px}
+.leadPanelHeading svg{color:#2563eb}
+.leadTaskComposer,.leadActivityComposer{display:grid;gap:9px}
+.leadTaskComposer{grid-template-columns:1fr 145px auto}
+.leadTaskComposer input,.leadActivityComposer select,.leadActivityComposer textarea{border:1px solid #dfe5ec;border-radius:11px;padding:10px 11px;background:#fff;outline:none}
+.leadActivityComposer .leadPrimary,.leadTaskComposer .leadPrimary{min-height:40px}
+.leadTaskList,.leadTimeline{margin-top:14px;display:grid;gap:8px}
+.leadTaskList>button{width:100%;border:0;background:#fff;border-radius:12px;padding:11px;display:flex;gap:10px;text-align:left;align-items:flex-start;cursor:pointer}
+.leadTaskList>button svg{color:#2563eb;margin-top:2px}
+.leadTaskList>button span{display:block}
+.leadTaskList strong,.leadTaskList small{display:block}
+.leadTaskList small{color:#64748b;margin-top:3px}
+.leadTaskList>button.completed strong{text-decoration:line-through;color:#94a3b8}
+.leadTimeline article{display:flex;gap:10px}
+.leadTimeline article>div{width:30px;height:30px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;flex:0 0 auto}
+.leadTimeline article p{margin:3px 0;color:#334155}
+.leadTimeline article small{color:#94a3b8}
+.leadTimeline article strong{color:#111827}
+@media(max-width:900px){.leadEngagementGrid{grid-template-columns:1fr}.leadTaskComposer{grid-template-columns:1fr}}
