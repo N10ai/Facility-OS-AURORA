@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertTriangle, BriefcaseBusiness, Calculator, Files } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { App } from './App';
 import { PricingEngine } from './components/PricingEngine';
 import { PricingEstimatesWorkspace } from './components/PricingEstimatesWorkspace';
 import { SalesWorkspace } from './components/SalesWorkspace';
+import { UniversalCreateMenu } from './components/UniversalCreateMenu';
 import { supabase } from '../services/supabase';
 import '../styles/app.css';
+import '../styles/create-menu.css';
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -38,9 +40,11 @@ function AuroraRoot() {
   return <>
     <App />
     {sessionReady&&authenticated&&<>
-      <button className="salesLauncher" type="button" aria-label="Sales and quotes" onClick={()=>setSalesOpen(true)}><BriefcaseBusiness size={20}/></button>
-      <button className="estimatesLauncher" type="button" onClick={() => setEstimatesOpen(true)}><Files size={18}/><span>Estimates</span></button>
-      <button className="pricingLauncher" type="button" onClick={() => setPricingOpen(true)}><Calculator size={18}/><span>Quick price</span></button>
+      <UniversalCreateMenu
+        onEstimate={()=>setPricingOpen(true)}
+        onSavedEstimates={()=>setEstimatesOpen(true)}
+        onQuote={()=>setSalesOpen(true)}
+      />
       <PricingEngine open={pricingOpen} onClose={() => setPricingOpen(false)} />
       <PricingEstimatesWorkspace open={estimatesOpen} onClose={() => setEstimatesOpen(false)} onNewEstimate={openNewEstimate} />
       <SalesWorkspace open={salesOpen} onClose={()=>setSalesOpen(false)}/>
