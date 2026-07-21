@@ -7,10 +7,10 @@ import { PricingEstimatesWorkspace } from './components/PricingEstimatesWorkspac
 import { SalesWorkspace } from './components/SalesWorkspace';
 import { UniversalCreateMenu } from './components/UniversalCreateMenu';
 import { LeadWorkspace } from './components/LeadWorkspace';
-import { supabase } from '../services/supabase';
-import '../styles/app.css';
-import '../styles/create-menu.css';
-import '../styles/leads.css';
+import { supabase } from './services/supabase';
+import './styles/app.css';
+import './styles/create-menu.css';
+import './styles/leads.css';
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
