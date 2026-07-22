@@ -7,11 +7,13 @@ import { PricingEstimatesWorkspace } from './components/PricingEstimatesWorkspac
 import { SalesWorkspace } from './components/SalesWorkspace';
 import { UniversalCreateMenu } from './components/UniversalCreateMenu';
 import { LeadWorkspace } from './components/LeadWorkspace';
+import { CustomerWorkspace } from './components/CustomerWorkspace';
 import { supabase } from './services/supabase';
-import '../styles/app.css';
-import '../styles/create-menu.css';
-import '../styles/leads.css';
-import '../styles/lead-engagement.css';
+import './styles/app.css';
+import './styles/create-menu.css';
+import './styles/leads.css';
+import './styles/lead-engagement.css';
+import './styles/customers.css';
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -29,6 +31,8 @@ function AuroraRoot() {
   const [estimatesOpen, setEstimatesOpen] = useState(params.get('estimates') === '1');
   const [salesOpen, setSalesOpen] = useState(params.get('sales') === '1');
   const [leadsOpen, setLeadsOpen] = useState(params.get('leads') === '1');
+  const [customersOpen, setCustomersOpen] = useState(params.get('customers') === '1');
+  const [customerStartMode,setCustomerStartMode]=useState('list');
   const [sessionReady,setSessionReady]=useState(false);
   const [authenticated,setAuthenticated]=useState(false);
 
@@ -41,10 +45,19 @@ function AuroraRoot() {
 
   useEffect(()=>{
     function handleCreate(event){
-      if(event.detail?.type==='lead') setLeadsOpen(true);
+      const type=event.detail?.type;
+      if(type==='lead')setLeadsOpen(true);
+      if(type==='customer'){setCustomerStartMode('create');setCustomersOpen(true)}
+      if(type==='facility'){setCustomerStartMode('list');setCustomersOpen(true)}
+    }
+    function handleNavigate(event){
+      const destination=event.detail?.destination||event.detail?.type;
+      if(destination==='customers'||destination==='crm-customers'){setCustomerStartMode('list');setCustomersOpen(true)}
+      if(destination==='leads'||destination==='crm-leads')setLeadsOpen(true);
     }
     window.addEventListener('facilityos:create',handleCreate);
-    return()=>window.removeEventListener('facilityos:create',handleCreate);
+    window.addEventListener('facilityos:navigate',handleNavigate);
+    return()=>{window.removeEventListener('facilityos:create',handleCreate);window.removeEventListener('facilityos:navigate',handleNavigate)};
   },[]);
 
   function openNewEstimate() { setEstimatesOpen(false); setPricingOpen(true); }
@@ -52,15 +65,12 @@ function AuroraRoot() {
   return <>
     <App />
     {sessionReady&&authenticated&&<>
-      <UniversalCreateMenu
-        onEstimate={()=>setPricingOpen(true)}
-        onSavedEstimates={()=>setEstimatesOpen(true)}
-        onQuote={()=>setSalesOpen(true)}
-      />
+      <UniversalCreateMenu onEstimate={()=>setPricingOpen(true)} onSavedEstimates={()=>setEstimatesOpen(true)} onQuote={()=>setSalesOpen(true)} />
       <PricingEngine open={pricingOpen} onClose={() => setPricingOpen(false)} />
       <PricingEstimatesWorkspace open={estimatesOpen} onClose={() => setEstimatesOpen(false)} onNewEstimate={openNewEstimate} />
       <SalesWorkspace open={salesOpen} onClose={()=>setSalesOpen(false)}/>
       <LeadWorkspace open={leadsOpen} onClose={()=>setLeadsOpen(false)}/>
+      <CustomerWorkspace open={customersOpen} startMode={customerStartMode} onClose={()=>{setCustomersOpen(false);setCustomerStartMode('list')}}/>
     </>}
   </>;
 }
