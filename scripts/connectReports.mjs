@@ -21,6 +21,11 @@ if (!text.includes(customer360Import)) {
   text = text.replace(communicationsImport, communicationsImport + "\n" + customer360Import);
 }
 
+const aiAssistantImport = "import { AIOperationsAssistant } from './components/AIOperationsAssistant';";
+if (!text.includes(aiAssistantImport)) {
+  text = text.replace(customer360Import, customer360Import + "\n" + aiAssistantImport);
+}
+
 text = text.replace(
   "else if(page==='reports') content=<ModulePlaceholder title=\"Reports\" description=\"Operations, proof-of-service, customer, financial, and employee performance reports.\"/>;",
   "else if(page==='reports') content=<ReportsWorkspace data={data}/>;"
@@ -31,10 +36,26 @@ text = text.replace(
   "{ label:'CRM', icon:UsersRound, items:[['customers','Customers',UsersRound],['contacts','Contacts',CircleUserRound],['communications','Communications',Mail],['quotes','Quotes',FileText],['facilities','Facilities',Building2]] },"
 );
 
+if (!text.includes("['ai-assistant','AI Assistant',Sparkles]")) {
+  text = text.replace(
+    "{ label:'Home', icon:Home, items:[['overview','Home',Home]] },",
+    "{ label:'Home', icon:Home, items:[['overview','Home',Home],['ai-assistant','AI Assistant',Sparkles]] },"
+  );
+}
+
 if (!text.includes("else if(page==='communications') content=<CommunicationsCenter data={data}/>;")) {
   text = text.replace(
     "else if(page==='contacts') content=<ContactsPage data={data} companyId={profile.company_id} reload={reload}/>;",
     "else if(page==='contacts') content=<ContactsPage data={data} companyId={profile.company_id} reload={reload}/>;\n    else if(page==='communications') content=<CommunicationsCenter data={data}/>;"
+  );
+}
+
+if (!text.includes("else if(page==='ai-assistant') content=<AIOperationsAssistant")) {
+  const routeMarker = "else if(page==='customers') content=<CustomersPage data={data} companyId={profile.company_id} reload={reload} setPage={setPage}/>;";
+  if (!text.includes(routeMarker)) throw new Error('AI Assistant route marker not found.');
+  text = text.replace(
+    routeMarker,
+    "else if(page==='ai-assistant') content=<AIOperationsAssistant data={data} onNavigate={setPage}/>;\n    " + routeMarker
   );
 }
 
