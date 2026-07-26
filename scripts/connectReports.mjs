@@ -66,4 +66,66 @@ if (!text.includes('<Customer360 customer={customer}')) {
   text = text.replace(selectedWorkspace, customer360Workspace);
 }
 
+// Mobile-safe role routing and account controls.
+text = text.replace(
+  "function Shell({profile,portal,setPortal,page,setPage,data,children}) {",
+  "function Shell({profile,portal,setPortal,page,setPage,data,onLogout,children}) {"
+);
+
+if (!text.includes('const portalOptions=')) {
+  text = text.replace(
+    "const flatAdmin=adminGroups.flatMap(g=>g.items);",
+    "const flatAdmin=adminGroups.flatMap(g=>g.items);\n  const portalOptions=['owner','admin','manager','supervisor'].includes(profile.role)?['admin','employee','customer']:profile.role==='customer'?['customer']:['employee'];"
+  );
+}
+
+text = text.replace(
+  "<div className=\"portalSwitch\">{['admin','employee','customer'].map(p=><button key={p} className={portal===p?'active':''} onClick={()=>{setPortal(p);setPage(p==='admin'?'overview':p==='employee'?'employee-home':'customer-home')}}>{p}</button>)}</div>",
+  "<div className=\"portalSwitch\">{portalOptions.map(p=><button key={p} className={portal===p?'active':''} onClick={()=>{setPortal(p);setPage(p==='admin'?'overview':p==='employee'?'employee-home':'customer-home')}}>{p}</button>)}</div>"
+);
+
+text = text.replace(
+  "<div className=\"profileCard\"><div className=\"avatar\">{profile.full_name?.slice(0,1)||'U'}</div><div><strong>{profile.full_name}</strong><span>{profile.role}</span></div></div>",
+  "<div className=\"profileCard\"><div className=\"avatar\">{profile.full_name?.slice(0,1)||'U'}</div><div className=\"grow\"><strong>{profile.full_name}</strong><span>{profile.role}</span></div><button className=\"icon\" onClick={onLogout} aria-label=\"Log out\"><LogOut size={18}/></button></div>"
+);
+
+text = text.replace(
+  "<button className=\"avatarButton\">{profile.full_name?.slice(0,1)||'U'}</button>",
+  "<button className=\"avatarButton\" onClick={()=>setMobileSheet('Account')} aria-label=\"Open account menu\">{profile.full_name?.slice(0,1)||'U'}</button>"
+);
+
+text = text.replace(
+  "{mobileSheet && <div className=\"mobileSheetBackdrop\" onClick={()=>setMobileSheet(null)}><section className=\"mobileSheet\" onClick={e=>e.stopPropagation()}><div className=\"sheetHandle\"/><h3>{mobileSheet}</h3>{(mobileSheet==='More' ? adminGroups.filter(g=>['Team','Reports','Settings'].includes(g.label)).flatMap(g=>g.items) : adminGroups.find(g=>g.label===mobileSheet)?.items||[]).map(([key,label,Icon])=><button key={key} onClick={()=>selectPage(key)}><Icon size={19}/><span>{label}</span><ChevronRight size={17}/></button>)}</section></div>}",
+  "{mobileSheet && <div className=\"mobileSheetBackdrop\" onClick={()=>setMobileSheet(null)}><section className=\"mobileSheet\" onClick={e=>e.stopPropagation()}><div className=\"sheetHandle\"/><h3>{mobileSheet}</h3>{mobileSheet==='Account'?<><div className=\"personRow\"><div className=\"avatar\">{profile.full_name?.slice(0,1)||'U'}</div><div className=\"grow\"><strong>{profile.full_name}</strong><span>{profile.role}</span></div></div><button onClick={onLogout}><LogOut size={19}/><span>Log out</span><ChevronRight size={17}/></button></>:(mobileSheet==='More' ? adminGroups.filter(g=>['Team','Reports','Settings'].includes(g.label)).flatMap(g=>g.items) : adminGroups.find(g=>g.label===mobileSheet)?.items||[]).map(([key,label,Icon])=><button key={key} onClick={()=>selectPage(key)}><Icon size={19}/><span>{label}</span><ChevronRight size={17}/></button>)}</section></div>}"
+);
+
+text = text.replace(
+  "return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage} data={data}>{content}</Shell>;",
+  "return <Shell profile={profile} portal={portal} setPortal={setPortal} page={page} setPage={setPage} data={data} onLogout={async()=>{await supabase.auth.signOut();setSession(null);setProfile(null);setData(empty)}}>{content}</Shell>;"
+);
+
+// Make employee assignment clearly optional and explain its effect.
+text = text.replace(
+  "<div className=\"form2\"><label>Employee<select value={form.assigned_to_profile_id} onChange={e=>setForm({...form,assigned_to_profile_id:e.target.value})}><option value=\"\">Unassigned</option>{employees.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></label><label>Estimated minutes<input type=\"number\" value={form.estimated_minutes} onChange={e=>setForm({...form,estimated_minutes:e.target.value})}/></label></div>",
+  "<div className=\"form2\"><label>Employee (optional)<select value={form.assigned_to_profile_id} onChange={e=>setForm({...form,assigned_to_profile_id:e.target.value})}><option value=\"\">Unassigned — assign later</option>{employees.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select><small>Assign an employee when you want this mission to appear in that employee's mobile portal. Leave it unassigned while planning.</small></label><label>Estimated minutes<input type=\"number\" value={form.estimated_minutes} onChange={e=>setForm({...form,estimated_minutes:e.target.value})}/></label></div>"
+);
+
+if (!text.includes('async function assignEmployee(order,profileId)')) {
+  text = text.replace(
+    "async function archive(order){",
+    "async function assignEmployee(order,profileId){const {error}=await updateWorkOrder(order.id,{assigned_to_profile_id:profileId||null});if(error)return setMessage(error.message);setMessage(profileId?'Employee assigned.':'Work order left unassigned.');await reload();setSelected({...order,assigned_to_profile_id:profileId||null});}\n\n  async function archive(order){"
+  );
+}
+
+const statsMarker = `<div className="stats">
+        <Stat icon={CalendarDays} label="Scheduled" value={current.scheduled_date} note={current.scheduled_time||'No time'}/>
+        <Stat icon={CircleUserRound} label="Assigned" value={employee(current.assigned_to_profile_id)?.full_name||'Unassigned'} note="Employee"/>
+        <Stat icon={Clock} label="Actual time" value={actualMinutes?\`${actualMinutes} min\`:'—'} note={\`${current.estimated_minutes||0} min estimated\`}/>
+        <Stat icon={CheckCircle2} label="Progress" value={\`${progress}%\`} note={\`${completed}/${areas.length} areas\`}/>
+      </div>`;
+if (!text.includes('Assign or reassign this mission')) {
+  text = text.replace(statsMarker, statsMarker + `
+      <section className="panel"><div className="panelTitle"><div><h2>Employee assignment</h2><p>Assign or reassign this mission. Unassigned work orders stay in the admin schedule but do not appear in an employee portal.</p></div></div><label>Assigned employee<select value={current.assigned_to_profile_id||''} onChange={e=>assignEmployee(current,e.target.value)}><option value="">Unassigned — assign later</option>{employees.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></label></section>`);
+}
+
 fs.writeFileSync(file, text);
