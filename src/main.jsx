@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, FileCheck2 } from 'lucide-react';
 import { App } from './App';
 import { PricingEngine } from './components/PricingEngine';
 import { PricingEstimatesWorkspace } from './components/PricingEstimatesWorkspace';
@@ -8,12 +8,14 @@ import { SalesWorkspace } from './components/SalesWorkspace';
 import { UniversalCreateMenu } from './components/UniversalCreateMenu';
 import { LeadWorkspace } from './components/LeadWorkspace';
 import { CustomerWorkspace } from './components/CustomerWorkspace';
+import { ServiceReportWorkspace } from './components/ServiceReportWorkspace';
 import { supabase } from './services/supabase';
 import './styles/app.css';
 import './styles/create-menu.css';
 import './styles/leads.css';
 import './styles/lead-engagement.css';
 import './styles/customers.css';
+import './styles/service-reports.css';
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -32,6 +34,7 @@ function AuroraRoot() {
   const [salesOpen, setSalesOpen] = useState(params.get('sales') === '1');
   const [leadsOpen, setLeadsOpen] = useState(params.get('leads') === '1');
   const [customersOpen, setCustomersOpen] = useState(params.get('customers') === '1');
+  const [reportOpen,setReportOpen]=useState(params.get('report')==='1');
   const [customerStartMode,setCustomerStartMode]=useState('list');
   const [sessionReady,setSessionReady]=useState(false);
   const [authenticated,setAuthenticated]=useState(false);
@@ -49,11 +52,13 @@ function AuroraRoot() {
       if(type==='lead')setLeadsOpen(true);
       if(type==='customer'){setCustomerStartMode('create');setCustomersOpen(true)}
       if(type==='facility'){setCustomerStartMode('list');setCustomersOpen(true)}
+      if(type==='service-report'||type==='report')setReportOpen(true);
     }
     function handleNavigate(event){
       const destination=event.detail?.destination||event.detail?.type;
       if(destination==='customers'||destination==='crm-customers'){setCustomerStartMode('list');setCustomersOpen(true)}
       if(destination==='leads'||destination==='crm-leads')setLeadsOpen(true);
+      if(destination==='service-reports'||destination==='reports')setReportOpen(true);
     }
     window.addEventListener('facilityos:create',handleCreate);
     window.addEventListener('facilityos:navigate',handleNavigate);
@@ -66,11 +71,13 @@ function AuroraRoot() {
     <App />
     {sessionReady&&authenticated&&<>
       <UniversalCreateMenu onEstimate={()=>setPricingOpen(true)} onSavedEstimates={()=>setEstimatesOpen(true)} onQuote={()=>setSalesOpen(true)} />
+      <button className="reportLauncher" onClick={()=>setReportOpen(true)}><FileCheck2/> Service report</button>
       <PricingEngine open={pricingOpen} onClose={() => setPricingOpen(false)} />
       <PricingEstimatesWorkspace open={estimatesOpen} onClose={() => setEstimatesOpen(false)} onNewEstimate={openNewEstimate} />
       <SalesWorkspace open={salesOpen} onClose={()=>setSalesOpen(false)}/>
       <LeadWorkspace open={leadsOpen} onClose={()=>setLeadsOpen(false)}/>
       <CustomerWorkspace open={customersOpen} startMode={customerStartMode} onClose={()=>{setCustomersOpen(false);setCustomerStartMode('list')}}/>
+      <ServiceReportWorkspace open={reportOpen} onClose={()=>setReportOpen(false)}/>
     </>}
   </>;
 }
